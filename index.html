@@ -8821,9 +8821,8 @@
 			// 重置密码
 			async resetPassword(email) {
 				try {
-					// 使用更通用的重定向URL
-					const baseUrl = window.location.origin;
-					const redirectUrl = `${baseUrl}/confirm.html?type=recovery`;
+					// 使用固定的重定向URL，确保与Supabase配置一致
+					const redirectUrl = 'https://Ruby-liuyuner.github.io/liuyaopaipan0913/confirm.html?type=recovery';
 					
 					console.log('发送密码重置邮件到:', email);
 					console.log('重定向URL:', redirectUrl);
@@ -8920,9 +8919,19 @@
 				try {
 					console.log('保存电子书笔记到云端:', noteData);
 					
+					// 映射字段名到数据库列名
+					const mappedData = {
+						chapter_id: noteData.chapterId,
+						chapter_title: noteData.chapterTitle,
+						content: noteData.content,
+						highlights: noteData.highlights
+					};
+					
+					console.log('映射后的数据:', mappedData);
+					
 					const { data, error } = await window.supabase
 						.from('book_notes')
-						.insert([noteData])
+						.insert([mappedData])
 						.select();
 					
 					if (error) {
@@ -8950,7 +8959,17 @@
 						throw error;
 					}
 					
-					return { success: true, data: data || [] };
+					// 映射数据库列名到前端字段名
+					const mappedData = (data || []).map(note => ({
+						id: note.id,
+						chapterId: note.chapter_id,
+						chapterTitle: note.chapter_title,
+						content: note.content,
+						highlights: note.highlights,
+						createdAt: note.created_at
+					}));
+					
+					return { success: true, data: mappedData };
 				} catch (error) {
 					console.error('获取电子书笔记出错:', error);
 					return { success: false, error: error.message };
@@ -8960,9 +8979,17 @@
 			// 更新电子书笔记
 			async updateBookNote(noteId, noteData) {
 				try {
+					// 映射字段名到数据库列名
+					const mappedData = {
+						chapter_id: noteData.chapterId,
+						chapter_title: noteData.chapterTitle,
+						content: noteData.content,
+						highlights: noteData.highlights
+					};
+					
 					const { data, error } = await window.supabase
 						.from('book_notes')
-						.update(noteData)
+						.update(mappedData)
 						.eq('id', noteId)
 						.select();
 					
