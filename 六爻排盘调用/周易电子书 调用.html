@@ -2325,22 +2325,87 @@
         let selectedRange = null;
         let noteBtnContainer = null;
 
-        // 底部导航栏功能
-        document.getElementById('nav-directory').addEventListener('click', function() {
-            togglePanel('directory-panel');
-        });
+        // 上传本地笔记到云端
+        function uploadLocalNoteToCloud(noteId, noteData) {
+            try {
+                if (window.parent) {
+                    const cloudNoteData = {
+                        chapterId: 'zhouyi',
+                        chapterTitle: '《周易》',
+                        content: noteData.note,
+                        highlights: [{
+                            text: noteData.text,
+                            noteId: noteId
+                        }]
+                    };
+                    
+                    const targetOrigin = window.location.protocol === 'file:' ? '*' : (window.location.origin || '*');
+                    window.parent.postMessage({
+                        type: 'saveBookNote',
+                        data: cloudNoteData
+                    }, targetOrigin);
+                    
+                    // 监听上传结果
+                    const handleUploadResponse = (event) => {
+                        if (event.data.type === 'saveBookNoteResponse') {
+                            window.removeEventListener('message', handleUploadResponse);
+                            if (event.data.success) {
+                                console.log('本地笔记上传成功:', noteId);
+                                // 标记为已上传并保存云端ID
+                                noteData.uploaded = true;
+                                if (event.data.data && event.data.data.id) {
+                                    noteData.cloudId = event.data.data.id;
+                                    console.log('保存云端ID:', event.data.data.id);
+                                }
+                                localStorage.setItem(noteId, JSON.stringify(noteData));
+                            } else {
+                                console.log('本地笔记上传失败:', event.data.error);
+                            }
+                        }
+                    };
+                    window.addEventListener('message', handleUploadResponse);
+                    
+                    // 设置超时
+                    setTimeout(() => {
+                        window.removeEventListener('message', handleUploadResponse);
+                    }, 5000);
+                }
+            } catch (error) {
+                console.log('上传本地笔记出错:', error);
+            }
+        }
 
-        document.getElementById('nav-night-mode').addEventListener('click', function() {
-            toggleNightMode();
-        });
-
-        document.getElementById('nav-notes').addEventListener('click', function() {
-            togglePanel('notes-panel');
-        });
-
-        document.getElementById('nav-settings').addEventListener('click', function() {
-            togglePanel('settings-panel');
-        });
+        // 底部导航栏功能 - 等待DOM加载完成
+        function initBottomNav() {
+            const navDirectory = document.getElementById('nav-directory');
+            const navNightMode = document.getElementById('nav-night-mode');
+            const navNotes = document.getElementById('nav-notes');
+            const navSettings = document.getElementById('nav-settings');
+            
+            if (navDirectory) {
+                navDirectory.addEventListener('click', function() {
+                    togglePanel('directory-panel');
+                });
+            }
+            
+            if (navNightMode) {
+                navNightMode.addEventListener('click', function() {
+                    toggleNightMode();
+                });
+            }
+            
+            if (navNotes) {
+                navNotes.addEventListener('click', function() {
+                    togglePanel('notes-panel');
+                });
+            }
+            
+            if (navSettings) {
+                navSettings.addEventListener('click', function() {
+                    togglePanel('settings-panel');
+                });
+            }
+        }
 
         // 切换面板显示/隐藏
         function togglePanel(panelId) {
@@ -2412,7 +2477,8 @@
 
         // 笔记功能
         function initTextSelectionNotes() {
-            document.addEventListener('mouseup', function(e) {
+            // 处理文字选择
+            function handleTextSelection(e) {
                 setTimeout(() => {
                     const selection = window.getSelection();
                     const text = selection.toString().trim();
@@ -2421,17 +2487,47 @@
                         selectedText = text;
                         selectedRange = selection.getRangeAt(0);
                         showNoteButton(e);
-            } else {
+                    } else {
                         hideNoteButton();
                     }
                 }, 100);
-            });
-
-            document.addEventListener('mousedown', function(e) {
+            }
+            
+            // 处理点击外部
+            function handleClickOutside(e) {
                 if (noteBtnContainer && !noteBtnContainer.contains(e.target)) {
                     hideNoteButton();
                 }
-            });
+            }
+            
+            // 鼠标事件（桌面端）
+            document.addEventListener('mouseup', handleTextSelection);
+            document.addEventListener('mousedown', handleClickOutside);
+            
+            // 触摸事件（移动端）
+            document.addEventListener('touchend', handleTextSelection);
+            document.addEventListener('touchstart', handleClickOutside);
+            
+            // 添加移动端文字选择样式
+            const style = document.createElement('style');
+            style.textContent = `
+                .main-content {
+                    -webkit-user-select: text;
+                    -moz-user-select: text;
+                    -ms-user-select: text;
+                    user-select: text;
+                    -webkit-touch-callout: default;
+                }
+                
+                .main-content * {
+                    -webkit-user-select: text;
+                    -moz-user-select: text;
+                    -ms-user-select: text;
+                    user-select: text;
+                    -webkit-touch-callout: default;
+                }
+            `;
+            document.head.appendChild(style);
 
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
@@ -2559,6 +2655,27 @@
         function generateNoteId(text) {
             return 'text_note_' + text.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
         }
+        
+        // 查找相同文字的现有笔记ID
+        function findExistingNoteId(text) {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('text_note_')) {
+                    try {
+                        const noteData = JSON.parse(localStorage.getItem(key));
+                        if (noteData.text === text) {
+                            return key;
+                        }
+                    } catch (e) {
+                        // 处理旧格式
+                        if (key.replace('text_note_', '') === text) {
+                            return key;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
 
         async function saveNote() {
             const textarea = document.getElementById('note-text');
@@ -2573,14 +2690,24 @@
                     // 编辑模式：使用现有ID
                     noteId = editingNoteId;
                 } else {
-                    // 新建模式：生成新ID
-                    noteId = generateNoteId(selectedText);
+                    // 新建模式：检查是否已存在相同文字的笔记
+                    const existingId = findExistingNoteId(selectedText);
+                    if (existingId) {
+                        // 如果存在相同文字的笔记，更新它
+                        noteId = existingId;
+                        console.log('找到相同文字的现有笔记，将更新:', noteId);
+                    } else {
+                        // 如果不存在，生成新ID
+                        noteId = generateNoteId(selectedText);
+                        console.log('创建新笔记:', noteId);
+                    }
                 }
                 
                 const noteData = {
                     text: selectedText,
                     note: noteContent,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    uploaded: false // 标记为未上传
                 };
                 
                 // 保存到本地存储
@@ -2590,6 +2717,7 @@
                 try {
                     if (window.parent) {
                         // 使用postMessage与父窗口通信
+                        const targetOrigin = window.location.protocol === 'file:' ? '*' : (window.location.origin || '*');
                         window.parent.postMessage({
                             type: 'saveBookNote',
                             data: {
@@ -2601,11 +2729,44 @@
                                     noteId: noteId
                                 }]
                             }
-                        }, '*');
+                        }, targetOrigin);
                         console.log('已请求保存笔记到云端');
+                        
+                        // 监听云端保存结果
+                        const handleSaveResponse = (event) => {
+                            if (event.data.type === 'saveBookNoteResponse') {
+                                window.removeEventListener('message', handleSaveResponse);
+                                if (event.data.success) {
+                                    console.log('云端保存成功，标记为已上传');
+                                    // 标记为已上传并保存云端ID
+                                    noteData.uploaded = true;
+                                    if (event.data.data && event.data.data.id) {
+                                        noteData.cloudId = event.data.data.id;
+                                        console.log('保存云端ID:', event.data.data.id);
+                                    }
+                                    localStorage.setItem(noteId, JSON.stringify(noteData));
+                                    loadAllNotes();
+                                } else {
+                                    console.log('云端保存失败，仅使用本地笔记');
+                                    loadAllNotes();
+                                }
+                            }
+                        };
+                        window.addEventListener('message', handleSaveResponse);
+                        
+                        // 设置超时，避免无限等待
+                        setTimeout(() => {
+                            window.removeEventListener('message', handleSaveResponse);
+                            console.log('云端保存超时，使用本地笔记');
+                            loadAllNotes();
+                        }, 5000);
+                    } else {
+                        // 没有父窗口，直接重新加载本地笔记
+                        loadAllNotes();
                     }
                 } catch (error) {
                     console.log('云端保存失败，仅保存到本地:', error);
+                    loadAllNotes();
                 }
                 
                 if (!editingNoteId) {
@@ -2624,27 +2785,74 @@
         async function deleteNote() {
             const noteId = generateNoteId(selectedText);
             
+            // 获取笔记数据，检查是否有云端ID
+            const noteDataStr = localStorage.getItem(noteId);
+            let cloudId = null;
+            
+            if (noteDataStr) {
+                try {
+                    const noteData = JSON.parse(noteDataStr);
+                    cloudId = noteData.cloudId;
+                } catch (e) {
+                    console.log('解析笔记数据失败:', e);
+                }
+            }
+            
             // 从本地存储删除
             localStorage.removeItem(noteId);
             
             // 尝试从云端删除
             try {
                 if (window.parent) {
-                    // 使用postMessage与父窗口通信
-                    window.parent.postMessage({
-                        type: 'deleteBookNote',
-                        data: {
-                            noteId: noteId
+                    const targetOrigin = window.location.protocol === 'file:' ? '*' : (window.location.origin || '*');
+                    
+                    // 监听云端删除响应
+                    const handleDeleteResponse = (event) => {
+                        if (event.data.type === 'deleteBookNoteResponse') {
+                            window.removeEventListener('message', handleDeleteResponse);
+                            console.log('云端删除响应:', event.data);
+                            // 无论云端删除成功与否，都重新加载笔记列表
+                            loadAllNotes();
                         }
-                    }, '*');
-                    console.log('已请求从云端删除笔记:', noteId);
+                    };
+                    window.addEventListener('message', handleDeleteResponse);
+                    
+                    if (cloudId) {
+                        // 使用云端ID删除
+                        window.parent.postMessage({
+                            type: 'deleteBookNote',
+                            data: {
+                                noteId: cloudId
+                            }
+                        }, targetOrigin);
+                        console.log('已请求从云端删除笔记（使用云端ID）:', cloudId);
+                    } else {
+                        // 使用本地ID删除（云端会通过文字内容查找）
+                        window.parent.postMessage({
+                            type: 'deleteBookNote',
+                            data: {
+                                noteId: noteId
+                            }
+                        }, targetOrigin);
+                        console.log('已请求从云端删除笔记（使用本地ID）:', noteId);
+                    }
+                    
+                    // 设置超时，避免无限等待
+                    setTimeout(() => {
+                        window.removeEventListener('message', handleDeleteResponse);
+                        console.log('云端删除超时，重新加载笔记列表');
+                        loadAllNotes();
+                    }, 5000);
+                } else {
+                    // 没有父窗口，直接重新加载
+                    loadAllNotes();
                 }
             } catch (error) {
                 console.log('云端删除失败，仅从本地删除:', error);
+                loadAllNotes();
             }
             
             removeHighlight(noteId);
-            loadAllNotes();
             hideNotePopup();
         }
 
@@ -2673,10 +2881,79 @@
             });
         }
 
-        function loadAllNotes() {
+        async function loadAllNotes() {
             const notesList = document.getElementById('all-notes-list');
-            const notes = [];
+            let notes = [];
             
+            // 首先尝试从云端加载笔记
+            try {
+                if (window.parent) {
+                    console.log('开始从云端加载笔记...');
+                    console.log('发送getBookNotes请求到父窗口');
+                    // 使用postMessage请求云端笔记
+                    const targetOrigin = window.location.protocol === 'file:' ? '*' : (window.location.origin || '*');
+                    window.parent.postMessage({
+                        type: 'getBookNotes',
+                        data: {
+                            chapterId: 'zhouyi'
+                        }
+                    }, targetOrigin);
+                    
+                    // 等待云端笔记响应
+                    await new Promise((resolve) => {
+                        const handleMessage = (event) => {
+                            console.log('收到云端笔记响应:', event.data);
+                            if (event.data.type === 'bookNotesResponse') {
+                                window.removeEventListener('message', handleMessage);
+                                console.log('云端笔记响应详情:', {
+                                    success: event.data.success,
+                                    dataLength: event.data.data?.length || 0,
+                                    error: event.data.error
+                                });
+                                if (event.data.success) {
+                                    console.log('云端笔记加载成功，数量:', event.data.data?.length || 0);
+                                    // 将云端笔记转换为本地格式
+                                    const cloudNotes = event.data.data || [];
+                                    cloudNotes.forEach(cloudNote => {
+                                        const highlightText = cloudNote.highlights?.[0]?.text || '';
+                                        if (highlightText) {
+                                            // 使用文字内容作为ID，确保相同文字的笔记使用同一个ID
+                                            const localNoteId = `text_note_${highlightText.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '')}`;
+                                            const localNoteData = {
+                                                text: highlightText,
+                                                note: cloudNote.content,
+                                                timestamp: cloudNote.createdAt || new Date().toISOString(),
+                                                uploaded: true, // 标记为已上传，避免重复上传
+                                                cloudId: cloudNote.id // 保存云端ID，用于后续更新
+                                            };
+                                            localStorage.setItem(localNoteId, JSON.stringify(localNoteData));
+                                            console.log('云端笔记已缓存到本地:', localNoteId);
+                                        }
+                                    });
+                                } else {
+                                    console.log('云端笔记加载失败:', event.data.error);
+                                }
+                                resolve();
+                            }
+                        };
+                        window.addEventListener('message', handleMessage);
+                        console.log('已添加云端笔记响应监听器');
+                        
+                        // 设置超时，避免无限等待
+                        setTimeout(() => {
+                            window.removeEventListener('message', handleMessage);
+                            console.log('云端笔记加载超时，使用本地笔记');
+                            resolve();
+                        }, 10000); // 增加超时时间到10秒
+                    });
+                } else {
+                    console.log('没有父窗口，跳过云端笔记加载');
+                }
+            } catch (error) {
+                console.log('云端笔记加载失败，使用本地笔记:', error);
+            }
+            
+            // 从本地存储加载笔记
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key && key.startsWith('text_note_')) {
@@ -2688,6 +2965,12 @@
                             note: noteData.note,
                             timestamp: noteData.timestamp
                         });
+                        
+                        // 检查是否需要上传到云端
+                        if (window.parent && !noteData.uploaded) {
+                            console.log('发现未上传的本地笔记，尝试上传到云端:', key);
+                            uploadLocalNoteToCloud(key, noteData);
+                        }
                     } catch (e) {
                         // 处理旧格式
                         notes.push({
@@ -2763,36 +3046,111 @@
                         // 第二次点击，执行删除
                         console.log('执行删除操作');
                         
-                        // 从localStorage删除
-                        localStorage.removeItem(noteId);
-                        
-                        // 移除页面上的高亮
-                        const highlights = document.querySelectorAll(`.highlighted-text[data-note-id="${noteId}"]`);
-                        highlights.forEach(highlight => {
-                            const parent = highlight.parentNode;
-                            parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
-                            parent.normalize();
-                        });
-                        
-                        // 重新加载笔记列表
-                        loadAllNotes();
-                        
-                        console.log('笔记已删除');
+                        // 调用统一的删除函数，确保云端同步
+                        deleteNoteById(noteId);
                     }
                 });
             });
         }
         
         // 通过ID删除笔记
-        function deleteNoteById(noteId) {
+        async function deleteNoteById(noteId) {
+            console.log('deleteNoteById 被调用，笔记ID:', noteId);
+            
+            // 检查笔记是否存在
+            const noteDataStr = localStorage.getItem(noteId);
+            if (!noteDataStr) {
+                console.log('笔记不存在，无法删除:', noteId);
+                return;
+            }
+            
+            // 获取笔记数据，检查是否有云端ID
+            let cloudId = null;
+            
+            if (noteDataStr) {
+                try {
+                    const noteData = JSON.parse(noteDataStr);
+                    cloudId = noteData.cloudId;
+                    console.log('笔记数据:', { text: noteData.text, cloudId: cloudId, uploaded: noteData.uploaded });
+                } catch (e) {
+                    console.log('解析笔记数据失败:', e);
+                }
+            }
+            
             // 从localStorage中删除
             localStorage.removeItem(noteId);
             
             // 移除页面上的高亮
             removeHighlight(noteId);
             
-            // 重新加载笔记列表
-            loadAllNotes();
+            // 尝试从云端删除
+            if (cloudId && window.parent) {
+                try {
+                    const targetOrigin = window.location.protocol === 'file:' ? '*' : (window.location.origin || '*');
+                    
+                    // 监听云端删除响应
+                    const handleDeleteResponse = (event) => {
+                        if (event.data.type === 'deleteBookNoteResponse') {
+                            window.removeEventListener('message', handleDeleteResponse);
+                            console.log('云端删除响应:', event.data);
+                            loadAllNotes();
+                        }
+                    };
+                    window.addEventListener('message', handleDeleteResponse);
+                    
+                    window.parent.postMessage({
+                        type: 'deleteBookNote',
+                        data: {
+                            noteId: cloudId // 使用云端ID
+                        }
+                    }, targetOrigin);
+                    console.log('已请求从云端删除笔记:', cloudId);
+                    
+                    // 设置超时
+                    setTimeout(() => {
+                        window.removeEventListener('message', handleDeleteResponse);
+                        loadAllNotes();
+                    }, 5000);
+                } catch (error) {
+                    console.log('云端删除失败，仅从本地删除:', error);
+                    loadAllNotes();
+                }
+            } else if (window.parent) {
+                // 如果没有云端ID，尝试通过文字内容查找云端记录
+                try {
+                    const targetOrigin = window.location.protocol === 'file:' ? '*' : (window.location.origin || '*');
+                    
+                    // 监听云端删除响应
+                    const handleDeleteResponse = (event) => {
+                        if (event.data.type === 'deleteBookNoteResponse') {
+                            window.removeEventListener('message', handleDeleteResponse);
+                            console.log('云端删除响应:', event.data);
+                            loadAllNotes();
+                        }
+                    };
+                    window.addEventListener('message', handleDeleteResponse);
+                    
+                    window.parent.postMessage({
+                        type: 'deleteBookNote',
+                        data: {
+                            noteId: noteId // 使用本地ID
+                        }
+                    }, targetOrigin);
+                    console.log('已请求从云端删除笔记:', noteId);
+                    
+                    // 设置超时
+                    setTimeout(() => {
+                        window.removeEventListener('message', handleDeleteResponse);
+                        loadAllNotes();
+                    }, 5000);
+                } catch (error) {
+                    console.log('云端删除失败，仅从本地删除:', error);
+                    loadAllNotes();
+                }
+            } else {
+                // 没有父窗口，直接重新加载
+                loadAllNotes();
+            }
             
             console.log('笔记已删除:', noteId);
         }
@@ -3060,12 +3418,24 @@
             console.log('高亮恢复完成');
         }
 
+        // 监听来自父窗口的消息
+        window.addEventListener('message', function(event) {
+            console.log('电子书iframe收到消息:', event.data);
+            if (event.data.type === 'syncNotesAfterLogin') {
+                console.log('收到登录后同步笔记的请求，开始重新加载笔记');
+                loadAllNotes(); // 重新加载笔记，会从云端获取并缓存到本地
+            }
+        });
+
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
             const nightMode = localStorage.getItem('nightMode') === 'true';
             if (nightMode) {
                 toggleNightMode();
             }
+            
+            // 初始化底部导航栏
+            initBottomNav();
             
             initTextSelectionNotes();
             initSettings();
