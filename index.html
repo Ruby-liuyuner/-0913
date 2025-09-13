@@ -8679,7 +8679,336 @@
 			client: !!window.supabase
 		});
 	</script>
-	<script src="supabase-service.js"></script>
+	
+	<!-- SupabaseService 类定义 -->
+	<script>
+		// Supabase数据存储服务类
+		class SupabaseService {
+			constructor() {
+				this.currentUser = null;
+				this.init();
+			}
+			
+			// 等待 supabase 加载完成
+			waitForSupabase() {
+				return new Promise((resolve) => {
+					const checkSupabase = () => {
+						if (window.supabase) {
+							resolve();
+						} else {
+							setTimeout(checkSupabase, 100);
+						}
+					};
+					checkSupabase();
+				});
+			}
+
+			// 初始化服务
+			async init() {
+				console.log('SupabaseService 开始初始化...');
+				
+				// 等待 supabase 加载完成
+				await this.waitForSupabase();
+				console.log('Supabase 客户端已加载');
+				
+				// 监听用户认证状态
+				window.supabase.auth.onAuthStateChange((event, session) => {
+					console.log('认证状态变化:', event, session ? '有会话' : '无会话');
+					this.currentUser = session?.user || null;
+					if (this.currentUser) {
+						console.log('用户已登录:', this.currentUser.email);
+						this.onUserLogin(this.currentUser);
+					} else {
+						console.log('用户未登录');
+						this.onUserLogout();
+					}
+				});
+				
+				console.log('SupabaseService 初始化完成');
+			}
+
+			// 用户登录
+			async login(email, password) {
+				try {
+					console.log('SupabaseService.login 被调用:', { email, hasPassword: !!password });
+					console.log('Supabase 客户端状态:', !!window.supabase);
+					
+					const { data, error } = await window.supabase.auth.signInWithPassword({
+						email: email,
+						password: password
+					});
+					
+					console.log('Supabase 登录响应:', { data, error });
+					
+					if (error) {
+						console.error('登录错误:', error);
+						// 检查是否是邮箱未确认错误
+						if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+							return { 
+								success: false, 
+								error: '邮箱未确认，请检查邮箱并点击确认链接',
+								needsConfirmation: true
+							};
+						}
+						throw error;
+					}
+					console.log('登录成功:', data.user);
+					return { success: true, user: data.user };
+				} catch (error) {
+					console.error('登录出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 用户注册
+			async register(email, password) {
+				try {
+					console.log('Supabase注册请求:', { email, password: '***' });
+					console.log('Supabase客户端状态:', !!window.supabase);
+					
+					const { data, error } = await window.supabase.auth.signUp({
+						email: email,
+						password: password
+					});
+					
+					console.log('Supabase注册响应:', { data, error });
+					
+					if (error) {
+						throw error;
+					}
+					
+					return { success: true, user: data.user };
+				} catch (error) {
+					console.error('注册出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 用户登出
+			async logout() {
+				try {
+					const { error } = await window.supabase.auth.signOut();
+					if (error) {
+						throw error;
+					}
+					this.currentUser = null;
+					console.log('用户已登出');
+					return { success: true };
+				} catch (error) {
+					console.error('登出出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 修改密码
+			async changePassword(currentPassword, newPassword) {
+				try {
+					const { error } = await window.supabase.auth.updateUser({
+						password: newPassword
+					});
+					
+					if (error) {
+						throw error;
+					}
+					
+					return { success: true };
+				} catch (error) {
+					console.error('修改密码出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 重置密码
+			async resetPassword(email) {
+				try {
+					// 使用更通用的重定向URL
+					const baseUrl = window.location.origin;
+					const redirectUrl = `${baseUrl}/confirm.html?type=recovery`;
+					
+					console.log('发送密码重置邮件到:', email);
+					console.log('重定向URL:', redirectUrl);
+					
+					const { error } = await window.supabase.auth.resetPasswordForEmail(email, {
+						redirectTo: redirectUrl,
+						emailRedirectTo: redirectUrl
+					});
+
+					if (error) {
+						throw error;
+					}
+					return { success: true };
+				} catch (error) {
+					console.error('重置密码出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 保存排盘记录到云端
+			async savePaipanRecord(record) {
+				try {
+					console.log('保存排盘记录到云端:', record);
+					
+					const recordData = {
+						question: record.question,
+						time: record.time,
+						gua_data: {
+							yongshen: record.yongshen,
+							fullGuaContent: record.fullGuaContent,
+							timestamp: record.timestamp
+						}
+					};
+					
+					console.log('处理后的记录数据:', recordData);
+					
+					const { data, error } = await window.supabase
+						.from('paipan_records')
+						.insert([recordData])
+						.select();
+					
+					if (error) {
+						throw error;
+					}
+					
+					console.log('排盘记录保存成功:', data);
+					return { success: true, data: data[0] };
+				} catch (error) {
+					console.error('保存排盘记录出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 获取排盘记录
+			async getPaipanRecords() {
+				try {
+					const { data, error } = await window.supabase
+						.from('paipan_records')
+						.select('*')
+						.order('created_at', { ascending: false });
+					
+					if (error) {
+						throw error;
+					}
+					
+					return { success: true, data: data || [] };
+				} catch (error) {
+					console.error('获取排盘记录出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 删除排盘记录
+			async deletePaipanRecord(recordId) {
+				try {
+					const { error } = await window.supabase
+						.from('paipan_records')
+						.delete()
+						.eq('id', recordId);
+					
+					if (error) {
+						throw error;
+					}
+					
+					return { success: true };
+				} catch (error) {
+					console.error('删除排盘记录出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 保存电子书笔记
+			async saveBookNote(noteData) {
+				try {
+					console.log('保存电子书笔记到云端:', noteData);
+					
+					const { data, error } = await window.supabase
+						.from('book_notes')
+						.insert([noteData])
+						.select();
+					
+					if (error) {
+						throw error;
+					}
+					
+					console.log('电子书笔记保存成功:', data);
+					return { success: true, data: data[0] };
+				} catch (error) {
+					console.error('保存电子书笔记出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 获取电子书笔记
+			async getBookNotes(chapterId) {
+				try {
+					const { data, error } = await window.supabase
+						.from('book_notes')
+						.select('*')
+						.eq('chapter_id', chapterId)
+						.order('created_at', { ascending: false });
+					
+					if (error) {
+						throw error;
+					}
+					
+					return { success: true, data: data || [] };
+				} catch (error) {
+					console.error('获取电子书笔记出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 更新电子书笔记
+			async updateBookNote(noteId, noteData) {
+				try {
+					const { data, error } = await window.supabase
+						.from('book_notes')
+						.update(noteData)
+						.eq('id', noteId)
+						.select();
+					
+					if (error) {
+						throw error;
+					}
+					
+					return { success: true, data: data[0] };
+				} catch (error) {
+					console.error('更新电子书笔记出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 删除电子书笔记
+			async deleteBookNote(noteId) {
+				try {
+					const { error } = await window.supabase
+						.from('book_notes')
+						.delete()
+						.eq('id', noteId);
+					
+					if (error) {
+						throw error;
+					}
+					
+					return { success: true };
+				} catch (error) {
+					console.error('删除电子书笔记出错:', error);
+					return { success: false, error: error.message };
+				}
+			}
+
+			// 用户登录成功回调
+			onUserLogin(user) {
+				console.log('用户登录成功，开始同步数据...');
+				// 这里可以添加登录成功后的逻辑
+			}
+
+			// 用户登出回调
+			onUserLogout() {
+				console.log('用户已登出');
+				// 这里可以添加登出后的逻辑
+			}
+		}
+	</script>
 	
 
 	<!-- 认证模态框 -->
