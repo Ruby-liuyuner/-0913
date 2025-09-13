@@ -8672,6 +8672,12 @@
 		// 创建 Supabase 客户端
 		import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
 		window.supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+		
+		console.log('Supabase客户端已创建:', {
+			url: supabaseConfig.url,
+			hasKey: !!supabaseConfig.anonKey,
+			client: !!window.supabase
+		});
 	</script>
 	<script src="supabase-service.js"></script>
 	
@@ -8899,31 +8905,47 @@
 			// 绑定登录提交事件
 			const loginSubmitBtn = document.getElementById('loginSubmitBtn');
 			if (loginSubmitBtn) {
-				loginSubmitBtn.addEventListener('click', async function() {
+				console.log('登录按钮找到，绑定事件');
+				loginSubmitBtn.addEventListener('click', async function(event) {
+					console.log('登录按钮被点击');
+					event.preventDefault();
+					
 					const email = document.getElementById('loginEmail').value;
 					const password = document.getElementById('loginPassword').value;
+					
+					console.log('登录信息:', { email: email ? '已填写' : '未填写', password: password ? '已填写' : '未填写' });
 					
 					if (!email || !password) {
 						showMessage('请填写邮箱和密码', 'error');
 						return;
 					}
 					
-					const result = await window.supabaseService.login(email, password);
-					if (result.success) {
-						// 手动更新用户状态
-						window.supabaseService.currentUser = result.user;
-						showMessage('登录成功！', 'success');
-						document.getElementById('authModal').style.display = 'none';
-						updateUserStatus();
-					} else {
-						// 检查是否需要邮箱确认
-						if (result.needsConfirmation) {
-							showMessage('邮箱未确认，请检查邮箱并点击确认链接后再登录', 'warning');
+					console.log('开始登录...');
+					try {
+						const result = await window.supabaseService.login(email, password);
+						console.log('登录结果:', result);
+						
+						if (result.success) {
+							// 手动更新用户状态
+							window.supabaseService.currentUser = result.user;
+							showMessage('登录成功！', 'success');
+							document.getElementById('authModal').style.display = 'none';
+							updateUserStatus();
 						} else {
-							showMessage('登录失败：' + result.error, 'error');
+							// 检查是否需要邮箱确认
+							if (result.needsConfirmation) {
+								showMessage('邮箱未确认，请检查邮箱并点击确认链接后再登录', 'warning');
+							} else {
+								showMessage('登录失败：' + result.error, 'error');
+							}
 						}
+					} catch (error) {
+						console.error('登录过程中出错:', error);
+						showMessage('登录过程中出错：' + error.message, 'error');
 					}
 				});
+			} else {
+				console.error('未找到登录按钮元素');
 			}
 			
 			// 绑定注册提交事件
@@ -9023,22 +9045,37 @@
 		
 		// 更新用户状态显示
 		function updateUserStatus() {
+			console.log('updateUserStatus 被调用');
+			console.log('当前用户状态:', window.supabaseService?.currentUser);
+			
 			// 更新"我的"标签页中的用户状态
 			const profileUserInfo = document.getElementById('profileUserInfo');
 			const profileLoginPrompt = document.getElementById('profileLoginPrompt');
 			const profileUserEmail = document.getElementById('profileUserEmail');
+			
+			console.log('UI元素状态:', {
+				profileUserInfo: !!profileUserInfo,
+				profileLoginPrompt: !!profileLoginPrompt,
+				profileUserEmail: !!profileUserEmail
+			});
+			
 			if (window.supabaseService && window.supabaseService.currentUser) {
+				console.log('显示已登录状态');
 				// 已登录状态
 				if (profileUserEmail) {
 					profileUserEmail.textContent = window.supabaseService.currentUser.email;
+					console.log('更新邮箱显示:', window.supabaseService.currentUser.email);
 				}
 				if (profileUserInfo) {
 					profileUserInfo.style.display = 'block';
+					console.log('显示用户信息区域');
 				}
 				if (profileLoginPrompt) {
 					profileLoginPrompt.style.display = 'none';
+					console.log('隐藏登录提示');
 				}
 			} else {
+				console.log('显示未登录状态');
 				// 未登录状态
 				if (profileUserInfo) {
 					profileUserInfo.style.display = 'none';
@@ -9071,10 +9108,23 @@
 		window.addEventListener('message', async function(event) {
 			console.log('收到iframe消息:', event.data, '来源:', event.origin);
 			
-			// 安全检查：确保消息来源
-			if (event.origin !== window.location.origin) {
-				console.log('消息来源不匹配，忽略:', event.origin, 'vs', window.location.origin);
-				return;
+			// 安全检查：确保消息来源（兼容file://协议）
+			// 在file://协议下，允许来自null origin的消息
+			const currentOrigin = window.location.origin || 'file://';
+			const eventOrigin = event.origin;
+			
+			// 如果是file://协议，允许null origin或file:// origin
+			if (currentOrigin === 'file://') {
+				if (eventOrigin !== null && eventOrigin !== 'file://' && eventOrigin !== 'null') {
+					console.log('消息来源不匹配，忽略:', eventOrigin, 'vs', currentOrigin);
+					return;
+				}
+			} else {
+				// 对于HTTP协议，严格检查origin
+				if (eventOrigin !== currentOrigin) {
+					console.log('消息来源不匹配，忽略:', eventOrigin, 'vs', currentOrigin);
+					return;
+				}
 			}
 			
 			if (event.data.type === 'saveBookNote') {
