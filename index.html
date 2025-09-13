@@ -8673,6 +8673,10 @@
 	<!-- <script src="firebase-integration.js"></script> -->
 	
 	<!-- 方案2：Supabase（推荐，无需计费） -->
+	<!-- 引入缓存同步服务 -->
+	<script src="cache-sync-service.js"></script>
+	<!-- 引入同步状态显示组件 -->
+	<script src="sync-status-widget.js"></script>
 	<script type="module">
 		// 直接嵌入 Supabase 配置
 		const supabaseConfig = {
@@ -9656,8 +9660,23 @@
 			if (event.data.type === 'saveBookNote') {
 				console.log('处理保存笔记请求:', event.data.data);
 				try {
-					if (window.supabaseService && window.supabaseService.currentUser) {
-						console.log('用户已登录，开始保存到云端');
+					// 使用缓存同步服务保存笔记
+					if (window.cacheSyncService) {
+						console.log('使用缓存同步服务保存笔记');
+						const noteId = await window.cacheSyncService.saveNote(event.data.data);
+						
+						// 发送响应回iframe
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'saveBookNoteResponse',
+							success: true,
+							noteId: noteId,
+							message: '笔记已保存，将在网络可用时同步到云端'
+						}, targetOrigin);
+						
+						console.log('笔记已通过缓存同步服务保存');
+					} else if (window.supabaseService && window.supabaseService.currentUser) {
+						console.log('缓存同步服务不可用，使用直接云端保存');
 						const result = await window.supabaseService.saveBookNote(event.data.data);
 						
 						// 发送响应回iframe
@@ -9674,17 +9693,17 @@
 							console.log('电子书笔记云端保存失败:', result.error);
 						}
 					} else {
-						console.log('用户未登录，无法保存到云端');
+						console.log('用户未登录且缓存同步服务不可用');
 						// 发送失败响应
 						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
 						event.source.postMessage({
 							type: 'saveBookNoteResponse',
 							success: false,
-							error: '用户未登录'
+							error: '用户未登录且缓存同步服务不可用'
 						}, targetOrigin);
 					}
 				} catch (error) {
-					console.log('电子书笔记云端保存出错:', error);
+					console.log('电子书笔记保存出错:', error);
 					// 发送错误响应
 					const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
 					event.source.postMessage({
@@ -9696,8 +9715,23 @@
 			} else if (event.data.type === 'getBookNotes') {
 				console.log('处理获取笔记请求:', event.data.data);
 				try {
-					if (window.supabaseService && window.supabaseService.currentUser) {
-						console.log('用户已登录，开始从云端获取笔记');
+					// 使用缓存同步服务获取笔记
+					if (window.cacheSyncService) {
+						console.log('使用缓存同步服务获取笔记');
+						const notes = await window.cacheSyncService.getAllNotes();
+						
+						// 发送响应回iframe
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'bookNotesResponse',
+							success: true,
+							data: notes,
+							message: '已获取所有笔记（包含云端和本地）'
+						}, targetOrigin);
+						
+						console.log('通过缓存同步服务获取到笔记:', notes.length);
+					} else if (window.supabaseService && window.supabaseService.currentUser) {
+						console.log('缓存同步服务不可用，使用直接云端获取');
 						const result = await window.supabaseService.getBookNotes(event.data.data.chapterId);
 						console.log('云端笔记获取结果:', result);
 						
@@ -9710,18 +9744,18 @@
 							error: result.error
 						}, targetOrigin);
 					} else {
-						console.log('用户未登录，无法从云端获取笔记');
+						console.log('用户未登录且缓存同步服务不可用');
 						// 发送空响应
 						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
 						event.source.postMessage({
 							type: 'bookNotesResponse',
 							success: false,
 							data: [],
-							error: '用户未登录'
+							error: '用户未登录且缓存同步服务不可用'
 						}, targetOrigin);
 					}
 				} catch (error) {
-					console.log('电子书笔记云端获取出错:', error);
+					console.log('电子书笔记获取出错:', error);
 					// 发送错误响应
 					const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
 					event.source.postMessage({
@@ -9734,8 +9768,22 @@
 			} else if (event.data.type === 'deleteBookNote') {
 				console.log('处理删除笔记请求:', event.data.data);
 				try {
-					if (window.supabaseService && window.supabaseService.currentUser) {
-						console.log('用户已登录，开始从云端删除笔记');
+					// 使用缓存同步服务删除笔记
+					if (window.cacheSyncService) {
+						console.log('使用缓存同步服务删除笔记');
+						const success = await window.cacheSyncService.deleteNote(event.data.data.noteId);
+						
+						// 发送响应回iframe
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'deleteBookNoteResponse',
+							success: success,
+							message: success ? '笔记已删除，将在网络可用时同步到云端' : '删除失败'
+						}, targetOrigin);
+						
+						console.log('通过缓存同步服务删除笔记:', success);
+					} else if (window.supabaseService && window.supabaseService.currentUser) {
+						console.log('缓存同步服务不可用，使用直接云端删除');
 						const result = await window.supabaseService.deleteBookNote(event.data.data.noteId);
 						console.log('云端笔记删除结果:', result);
 						
@@ -9747,21 +9795,55 @@
 							error: result.error
 						}, targetOrigin);
 					} else {
-						console.log('用户未登录，无法从云端删除笔记');
+						console.log('用户未登录且缓存同步服务不可用');
 						// 发送失败响应
 						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
 						event.source.postMessage({
 							type: 'deleteBookNoteResponse',
 							success: false,
-							error: '用户未登录'
+							error: '用户未登录且缓存同步服务不可用'
 						}, targetOrigin);
 					}
 				} catch (error) {
-					console.log('电子书笔记云端删除出错:', error);
+					console.log('电子书笔记删除出错:', error);
 					// 发送错误响应
 					const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
 					event.source.postMessage({
 						type: 'deleteBookNoteResponse',
+						success: false,
+						error: error.message
+					}, targetOrigin);
+				}
+			} else if (event.data.type === 'forceSyncAll') {
+				console.log('处理强制同步所有数据请求');
+				try {
+					if (window.cacheSyncService) {
+						console.log('开始强制同步所有数据');
+						await window.cacheSyncService.forceSyncAll();
+						
+						// 发送响应回iframe
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'forceSyncAllResponse',
+							success: true,
+							message: '强制同步已完成'
+						}, targetOrigin);
+						
+						console.log('强制同步完成');
+					} else {
+						console.log('缓存同步服务不可用');
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'forceSyncAllResponse',
+							success: false,
+							error: '缓存同步服务不可用'
+						}, targetOrigin);
+					}
+				} catch (error) {
+					console.log('强制同步出错:', error);
+					const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+					event.source.postMessage({
+						type: 'forceSyncAllResponse',
 						success: false,
 						error: error.message
 					}, targetOrigin);
