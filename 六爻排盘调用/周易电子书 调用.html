@@ -453,6 +453,72 @@
             .main-content {
                 padding: 15px 20px;
             }
+            
+            /* 移动端笔记按钮优化 */
+            .note-button-container {
+                position: fixed !important;
+                z-index: 10000 !important;
+                background: rgba(0, 0, 0, 0.8) !important;
+                border-radius: 8px !important;
+                padding: 8px !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+            }
+            
+            .note-option-btn {
+                font-size: 16px !important;
+                padding: 12px 16px !important;
+                min-height: 44px !important; /* 确保触摸目标足够大 */
+                border-radius: 6px !important;
+            }
+            
+            /* 移动端笔记弹窗优化 */
+            .note-popup {
+                width: 90% !important;
+                max-width: 400px !important;
+                margin: 20px auto !important;
+                max-height: 80vh !important;
+                overflow-y: auto !important;
+            }
+            
+            .note-popup textarea {
+                min-height: 120px !important;
+                font-size: 16px !important; /* 防止iOS缩放 */
+                padding: 12px !important;
+            }
+            
+            .note-popup .button-group {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            
+            .note-popup button {
+                min-height: 44px !important;
+                font-size: 16px !important;
+                padding: 12px !important;
+            }
+            
+            /* 移动端笔记列表优化 */
+            .note-item {
+                padding: 15px !important;
+                margin-bottom: 15px !important;
+            }
+            
+            .note-text-highlight {
+                font-size: 16px !important;
+                line-height: 1.5 !important;
+            }
+            
+            .action-buttons {
+                flex-direction: column !important;
+                gap: 8px !important;
+                margin-top: 10px !important;
+            }
+            
+            .edit-note-btn, .delete-note-btn {
+                min-height: 44px !important;
+                font-size: 14px !important;
+                padding: 10px !important;
+            }
         }
     </style>
 </head>
@@ -2324,6 +2390,13 @@
         let selectedText = '';
         let selectedRange = null;
         let noteBtnContainer = null;
+        
+        // 检测是否为移动设备
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0);
+        }
 
         // 底部导航栏功能
         document.getElementById('nav-directory').addEventListener('click', function() {
@@ -2412,7 +2485,8 @@
 
         // 笔记功能
         function initTextSelectionNotes() {
-            document.addEventListener('mouseup', function(e) {
+            // 处理文本选择（支持鼠标和触摸）
+            function handleTextSelection(e) {
                 setTimeout(() => {
                     const selection = window.getSelection();
                     const text = selection.toString().trim();
@@ -2421,13 +2495,48 @@
                         selectedText = text;
                         selectedRange = selection.getRangeAt(0);
                         showNoteButton(e);
-            } else {
+                    } else {
                         hideNoteButton();
                     }
                 }, 100);
+            }
+
+            // 移动端文本选择处理
+            function handleMobileTextSelection(e) {
+                // 防止默认行为，避免页面滚动
+                e.preventDefault();
+                
+                setTimeout(() => {
+                    const selection = window.getSelection();
+                    const text = selection.toString().trim();
+                    
+                    if (text.length > 0) {
+                        selectedText = text;
+                        selectedRange = selection.getRangeAt(0);
+                        showNoteButton(e);
+                    } else {
+                        hideNoteButton();
+                    }
+                }, 300); // 移动端需要更长的延迟
+            }
+
+            // 鼠标事件
+            document.addEventListener('mouseup', handleTextSelection);
+            
+            // 触摸事件（移动端支持）
+            document.addEventListener('touchend', function(e) {
+                handleMobileTextSelection(e);
             });
 
+            // 处理点击外部隐藏按钮
             document.addEventListener('mousedown', function(e) {
+                if (noteBtnContainer && !noteBtnContainer.contains(e.target)) {
+                    hideNoteButton();
+                }
+            });
+
+            // 触摸开始事件
+            document.addEventListener('touchstart', function(e) {
                 if (noteBtnContainer && !noteBtnContainer.contains(e.target)) {
                     hideNoteButton();
                 }
@@ -2458,14 +2567,34 @@
                     showNotePopup();
                 }
             });
+
+            // 移动端触摸高亮文字
+            document.addEventListener('touchend', function(e) {
+                if (e.target.classList.contains('highlighted-text')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const noteId = e.target.getAttribute('data-note-id');
+                    const text = e.target.textContent;
+                    
+                    // 设置选中的文字和范围
+                    selectedText = text;
+                    const range = document.createRange();
+                    range.selectNode(e.target);
+                    selectedRange = range;
+                    
+                    // 显示笔记弹窗
+                    showNotePopup();
+                }
+            });
         }
 
         function showNoteButton(e) {
             hideNoteButton();
-            
+
             noteBtnContainer = document.createElement('div');
             noteBtnContainer.className = 'note-button-container';
-            
+
             const noteBtn = document.createElement('button');
             noteBtn.className = 'note-option-btn';
             noteBtn.textContent = '📝 写笔记';
@@ -2475,13 +2604,42 @@
                 showNotePopup();
                 hideNoteButton();
             };
-            
+
+            // 添加触摸事件支持
+            noteBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showNotePopup();
+                hideNoteButton();
+            });
+
             noteBtnContainer.appendChild(noteBtn);
             document.body.appendChild(noteBtnContainer);
-            
+
             const rect = selectedRange.getBoundingClientRect();
-            noteBtnContainer.style.left = (rect.left + window.scrollX) + 'px';
-            noteBtnContainer.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // 计算按钮位置，确保在屏幕内
+            let left = rect.left + window.scrollX;
+            let top = rect.bottom + window.scrollY + 5;
+            
+            // 如果按钮会超出右边界，调整到左边
+            if (left + 120 > viewportWidth) {
+                left = viewportWidth - 130;
+            }
+            
+            // 如果按钮会超出下边界，调整到上方
+            if (top + 50 > viewportHeight + window.scrollY) {
+                top = rect.top + window.scrollY - 55;
+            }
+            
+            // 确保不超出左边界和上边界
+            left = Math.max(10, left);
+            top = Math.max(10, top);
+            
+            noteBtnContainer.style.left = left + 'px';
+            noteBtnContainer.style.top = top + 'px';
         }
 
         function hideNoteButton() {
