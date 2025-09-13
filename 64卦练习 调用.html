@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>64卦</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #f5f5f5;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            background: #f0f0f0;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f5f5f5;
+            color: #333;
+            border: 2px solid #333;
+            text-align: center;
+            min-width: 80px;
+            flex: 1;
+            max-width: 120px;
+        }
+
+        .mode-btn:hover {
+            background: #333;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .mode-btn.active {
+            background: #333;
+            color: #ffffff;
+        }
+
+        .practice-area {
+            padding: 20px 40px 40px 40px;
+            min-height: 500px;
+        }
+
+        .question-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .question-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .gua-display {
+            background: #f0f0f0;
+            border-radius: 15px;
+            padding: 10px;
+            margin: 0;
+            border: 2px solid #666;
+        }
+
+        .gua-symbol {
+            font-family: 'Courier New', monospace;
+            font-size: 1.4em;
+            line-height: 0.5;
+            margin: 0;
+            color: #333;
+        }
+
+        .gua-name-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .option-btn {
+            padding: 8px 12px;
+            border: 2px solid #666;
+            border-radius: 8px;
+            background: #f5f5f5;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .option-btn:hover {
+            border-color: #333;
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .option-btn.selected {
+            border-color: #333;
+            background: #333;
+            color: #ffffff;
+        }
+
+        .option-btn.correct {
+            border-color: #28a745;
+            background: #28a745;
+            color: #ffffff;
+        }
+
+        .option-btn.incorrect {
+            border-color: #dc3545;
+            background: #dc3545;
+            color: #ffffff;
+        }
+
+        .input-container {
+            margin: 30px 0;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+
+        .gua-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #666;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            transition: border-color 0.3s ease;
+        }
+
+        .gua-input:focus {
+            outline: none;
+            border-color: #333;
+        }
+
+        .input-hint {
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            max-width: 150px;
+        }
+
+        .btn-primary {
+            background: #333;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #555;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #666;
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background: #555;
+        }
+
+        .btn-success {
+            background: #333;
+            color: #ffffff;
+        }
+
+        .btn-success:hover {
+            background: #555;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .result-correct {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result-incorrect {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .stats-container {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .stats-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* 通关测试样式 */
+        .challenge-header {
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+
+        .challenge-progress {
+            width: 100%;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-text {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .timer-text {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #333, #1a1a1a);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .options-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .stat-item {
+                padding: 8px;
+            }
+            
+            .stat-value {
+                font-size: 1.2em;
+            }
+            
+            .stat-label {
+                font-size: 0.8em;
+            }
+            
+            .mode-selector {
+                gap: 8px;
+            }
+            
+            .mode-btn {
+                padding: 8px 12px;
+                font-size: 0.8em;
+                min-width: 70px;
+            }
+            
+            .control-buttons {
+                gap: 10px;
+            }
+            
+            .btn {
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>64卦</h1>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('choice')">卦象选卦名</button>
+            <button class="mode-btn" onclick="setMode('challenge')">通关测试</button>
+        </div>
+
+        <div class="practice-area">
+            <!-- 选择题模式 -->
+            <div id="choice-mode" class="practice-mode">
+                <div class="question-container">
+                    <div class="question-title">请选择正确的卦名：</div>
+                    <div class="gua-display">
+                        <div class="gua-symbol" id="choice-gua-symbol"></div>
+                    </div>
+                    <div class="options-container" id="choice-options"></div>
+                </div>
+            </div>
+
+
+            <!-- 通关测试模式 -->
+            <div id="challenge-mode" class="practice-mode hidden">
+                <div class="challenge-header">
+                    <div class="challenge-progress">
+                        <div class="progress-info">
+                            <div class="progress-text">进度: <span id="challenge-progress">0/64</span></div>
+                            <div class="timer-text">用时: <span id="challenge-timer">00:00</span></div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-container">
+                    <div class="question-title" id="challenge-question-title"></div>
+                    <div class="gua-display" id="challenge-gua-display"></div>
+                    <div class="options-container" id="challenge-options"></div>
+                </div>
+            </div>
+
+            <!-- 结果显示 -->
+            <div id="result-message" class="result-message hidden"></div>
+
+            <!-- 控制按钮 -->
+            <div class="control-buttons">
+                <button class="btn btn-secondary" id="next-btn" onclick="nextQuestion()" disabled>下一题</button>
+                <button class="btn btn-success" id="restart-btn" onclick="restartPractice()">重新开始</button>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="stats-container" id="practice-stats">
+                <div class="stats-title">练习统计</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-questions">0</div>
+                        <div class="stat-label">总题数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="correct-answers">0</div>
+                        <div class="stat-label">正确数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="accuracy-rate">0%</div>
+                        <div class="stat-label">正确率</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 64卦数据
+        const guaData = [
+            { binary: '111111', name: '乾为天' },
+            { binary: '000000', name: '坤为地' },
+            { binary: '010001', name: '水雷屯' },
+            { binary: '100010', name: '山水蒙' },
+            { binary: '010111', name: '水天需' },
+            { binary: '111010', name: '天水讼' },
+            { binary: '000010', name: '地水师' },
+            { binary: '010000', name: '水地比' },
+            { binary: '110111', name: '风天小畜' },
+            { binary: '111011', name: '天泽履' },
+            { binary: '000111', name: '地天泰' },
+            { binary: '111000', name: '天地否' },
+            { binary: '111101', name: '天火同人' },
+            { binary: '101111', name: '火天大有' },
+            { binary: '000100', name: '地山谦' },
+            { binary: '001000', name: '雷地豫' },
+            { binary: '011001', name: '泽雷随' },
+            { binary: '100110', name: '山风蛊' },
+            { binary: '000011', name: '地泽临' },
+            { binary: '110000', name: '风地观' },
+            { binary: '101001', name: '火雷噬嗑' },
+            { binary: '100101', name: '山火贲' },
+            { binary: '100000', name: '山地剥' },
+            { binary: '000001', name: '地雷复' },
+            { binary: '111001', name: '天雷无妄' },
+            { binary: '100111', name: '山天大畜' },
+            { binary: '100001', name: '山雷颐' },
+            { binary: '011110', name: '泽风大过' },
+            { binary: '010010', name: '坎为水' },
+            { binary: '101101', name: '离为火' },
+            { binary: '011100', name: '泽山咸' },
+            { binary: '001110', name: '雷风恒' },
+            { binary: '111110', name: '天山遯' },
+            { binary: '001111', name: '雷天大壮' },
+            { binary: '101000', name: '火地晋' },
+            { binary: '000101', name: '地火明夷' },
+            { binary: '110101', name: '风火家人' },
+            { binary: '101011', name: '火泽睽' },
+            { binary: '010100', name: '水山蹇' },
+            { binary: '001010', name: '雷水解' },
+            { binary: '100011', name: '山泽损' },
+            { binary: '110001', name: '风雷益' },
+            { binary: '011111', name: '泽天夬' },
+            { binary: '111110', name: '天风姤' },
+            { binary: '011000', name: '泽地萃' },
+            { binary: '000110', name: '地风升' },
+            { binary: '011010', name: '泽水困' },
+            { binary: '010110', name: '水风井' },
+            { binary: '011101', name: '泽火革' },
+            { binary: '101110', name: '火风鼎' },
+            { binary: '001001', name: '震为雷' },
+            { binary: '100100', name: '艮为山' },
+            { binary: '110100', name: '风山渐' },
+            { binary: '001011', name: '雷泽归妹' },
+            { binary: '001101', name: '雷火丰' },
+            { binary: '101100', name: '火山旅' },
+            { binary: '110110', name: '巽为风' },
+            { binary: '011011', name: '兑为泽' },
+            { binary: '110010', name: '风水涣' },
+            { binary: '010011', name: '水泽节' },
+            { binary: '110011', name: '风泽中孚' },
+            { binary: '001100', name: '雷山小过' },
+            { binary: '010101', name: '水火既济' },
+            { binary: '101010', name: '火水未济' }
+        ];
+
+        let currentMode = 'choice';
+        let currentQuestion = null;
+        let selectedAnswer = null;
+        let stats = {
+            total: 0,
+            correct: 0
+        };
+
+        // 通关测试相关变量
+        let challengeData = [];
+        let challengeIndex = 0;
+        let challengeStartTime = null;
+        let challengeTimer = null;
+        let challengeStats = {
+            completed: 0,
+            total: 64
+        };
+
+        // 设置练习模式
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 显示对应模式
+            document.querySelectorAll('.practice-mode').forEach(div => {
+                div.classList.add('hidden');
+            });
+            document.getElementById(mode + '-mode').classList.remove('hidden');
+            
+            // 显示或隐藏统计信息
+            const statsContainer = document.getElementById('practice-stats');
+            if (mode === 'challenge') {
+                statsContainer.style.display = 'none';
+            } else {
+                statsContainer.style.display = 'block';
+            }
+            
+            // 重置状态
+            resetQuestionState();
+            
+            if (mode === 'challenge') {
+                startChallenge();
+            } else {
+                generateQuestion();
+            }
+        }
+
+        // 生成卦象符号
+        function generateGuaSymbol(binary) {
+            let symbol = '';
+            for (let i = 0; i < 6; i++) {
+                if (binary[i] === '1') {
+                    symbol += '———<br>';
+                } else {
+                    symbol += '— —<br>';
+                }
+            }
+            return symbol;
+        }
+
+        // 生成随机题目
+        function generateQuestion() {
+            const randomIndex = Math.floor(Math.random() * guaData.length);
+            currentQuestion = guaData[randomIndex];
+            
+            if (currentMode === 'choice') {
+                generateChoiceQuestion();
+            } else {
+                generateInputQuestion();
+            }
+        }
+
+        // 生成选择题
+        function generateChoiceQuestion() {
+            // 显示卦象
+            document.getElementById('choice-gua-symbol').innerHTML = generateGuaSymbol(currentQuestion.binary);
+            
+            // 生成选项
+            const options = [currentQuestion.name];
+            while (options.length < 4) {
+                const randomGua = guaData[Math.floor(Math.random() * guaData.length)];
+                if (!options.includes(randomGua.name)) {
+                    options.push(randomGua.name);
+                }
+            }
+            
+            // 打乱选项顺序
+            options.sort(() => Math.random() - 0.5);
+            
+            // 显示选项
+            const optionsContainer = document.getElementById('choice-options');
+            optionsContainer.innerHTML = '';
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.onclick = () => selectAnswer(option);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+
+        // 选择答案
+        function selectAnswer(answer) {
+            selectedAnswer = answer;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            
+            // 直接检查答案
+            checkAnswer();
+        }
+
+        // 检查答案
+        function checkAnswer() {
+            const isCorrect = selectedAnswer === currentQuestion.name;
+            showChoiceResult(isCorrect);
+            
+            // 更新统计
+            stats.total++;
+            if (isCorrect) {
+                stats.correct++;
+            }
+            updateStats();
+            
+            // 启用下一题按钮
+            document.getElementById('next-btn').disabled = false;
+        }
+
+        // 显示选择题结果
+        function showChoiceResult(isCorrect) {
+            const options = document.querySelectorAll('.option-btn');
+            options.forEach(btn => {
+                if (btn.textContent === currentQuestion.name) {
+                    btn.classList.add('correct');
+                } else if (btn.textContent === selectedAnswer && !isCorrect) {
+                    btn.classList.add('incorrect');
+                }
+                // 禁用所有选项按钮
+                btn.disabled = true;
+            });
+            
+            showResultMessage(isCorrect);
+        }
+
+
+        // 显示结果消息
+        function showResultMessage(isCorrect) {
+            const resultDiv = document.getElementById('result-message');
+            if (isCorrect) {
+                resultDiv.className = 'result-message result-correct';
+                resultDiv.textContent = '正确！';
+            } else {
+                resultDiv.className = 'result-message result-incorrect';
+                resultDiv.textContent = '错误！';
+            }
+            resultDiv.classList.remove('hidden');
+        }
+
+        // 下一题
+        function nextQuestion() {
+            resetQuestionState();
+            generateQuestion();
+        }
+
+        // 重置题目状态
+        function resetQuestionState() {
+            selectedAnswer = null;
+            document.getElementById('result-message').classList.add('hidden');
+            document.getElementById('next-btn').disabled = true;
+        }
+
+        // 重新开始练习
+        function restartPractice() {
+            stats = { total: 0, correct: 0 };
+            updateStats();
+            resetQuestionState();
+            generateQuestion();
+        }
+
+        // 更新统计信息
+        function updateStats() {
+            document.getElementById('total-questions').textContent = stats.total;
+            document.getElementById('correct-answers').textContent = stats.correct;
+            const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+            document.getElementById('accuracy-rate').textContent = accuracy + '%';
+        }
+
+        // 开始通关测试
+        function startChallenge() {
+            // 重置挑战数据
+            challengeData = [...guaData];
+            challengeIndex = 0;
+            challengeStats.completed = 0;
+            
+            // 随机打乱64卦顺序
+            challengeData.sort(() => Math.random() - 0.5);
+            
+            // 开始计时
+            challengeStartTime = Date.now();
+            startTimer();
+            
+            // 生成第一题
+            generateChallengeQuestion();
+        }
+
+        // 生成挑战题目
+        function generateChallengeQuestion() {
+            if (challengeIndex >= challengeData.length) {
+                // 通关完成
+                completeChallenge();
+                return;
+            }
+
+            currentQuestion = challengeData[challengeIndex];
+            
+            // 只使用卦象选卦名模式
+            generateChallengeChoiceQuestion();
+            
+            // 更新进度
+            updateChallengeProgress();
+        }
+
+        // 生成挑战选择题
+        function generateChallengeChoiceQuestion() {
+            document.getElementById('challenge-question-title').textContent = '请选择正确的卦名：';
+            document.getElementById('challenge-gua-display').innerHTML = '<div class="gua-symbol">' + generateGuaSymbol(currentQuestion.binary) + '</div>';
+            document.getElementById('challenge-options').style.display = 'grid';
+            
+            // 生成选项
+            const options = [currentQuestion.name];
+            while (options.length < 4) {
+                const randomGua = guaData[Math.floor(Math.random() * guaData.length)];
+                if (!options.includes(randomGua.name)) {
+                    options.push(randomGua.name);
+                }
+            }
+            options.sort(() => Math.random() - 0.5);
+            
+            // 显示选项
+            const optionsContainer = document.getElementById('challenge-options');
+            optionsContainer.innerHTML = '';
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.onclick = () => selectChallengeAnswer(option);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+
+        // 选择挑战答案
+        function selectChallengeAnswer(answer) {
+            selectedAnswer = answer;
+            
+            // 更新按钮状态
+            document.querySelectorAll('#challenge-options .option-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            
+            // 立即检查答案
+            checkChallengeAnswer();
+        }
+
+        // 检查挑战答案
+        function checkChallengeAnswer() {
+            const isCorrect = selectedAnswer === currentQuestion.name;
+            
+            if (isCorrect) {
+                challengeStats.completed++;
+                challengeIndex++;
+                
+                // 显示正确结果
+                showChallengeResult(true);
+                
+                // 延迟后进入下一题
+                setTimeout(() => {
+                    generateChallengeQuestion();
+                }, 1000);
+            } else {
+                // 挑战失败，重新开始
+                showChallengeResult(false);
+                setTimeout(() => {
+                    startChallenge();
+                }, 2000);
+            }
+        }
+
+        // 显示挑战结果
+        function showChallengeResult(isCorrect) {
+            const resultDiv = document.getElementById('result-message');
+            if (isCorrect) {
+                resultDiv.className = 'result-message result-correct';
+                resultDiv.textContent = '正确！';
+            } else {
+                resultDiv.className = 'result-message result-incorrect';
+                resultDiv.innerHTML = `错误！挑战失败！<br>正确答案是：${currentQuestion.name}<br>重新开始挑战...`;
+            }
+            resultDiv.classList.remove('hidden');
+        }
+
+        // 更新挑战进度
+        function updateChallengeProgress() {
+            document.getElementById('challenge-progress').textContent = `${challengeStats.completed}/${challengeStats.total}`;
+            const progressPercent = (challengeStats.completed / challengeStats.total) * 100;
+            document.getElementById('progress-fill').style.width = progressPercent + '%';
+        }
+
+        // 开始计时
+        function startTimer() {
+            challengeTimer = setInterval(() => {
+                const elapsed = Date.now() - challengeStartTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                document.getElementById('challenge-timer').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // 停止计时
+        function stopTimer() {
+            if (challengeTimer) {
+                clearInterval(challengeTimer);
+                challengeTimer = null;
+            }
+        }
+
+        // 完成挑战
+        function completeChallenge() {
+            stopTimer();
+            const elapsed = Date.now() - challengeStartTime;
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            
+            const resultDiv = document.getElementById('result-message');
+            resultDiv.className = 'result-message result-correct';
+            resultDiv.innerHTML = `🎉 恭喜通关！<br>用时：${minutes}分${seconds}秒<br>全部64卦挑战完成！`;
+            resultDiv.classList.remove('hidden');
+        }
+
+        // 页面加载时初始化
+        window.onload = function() {
+            generateQuestion();
+            updateStats();
+        };
+    </script>
+</body>
+</html>

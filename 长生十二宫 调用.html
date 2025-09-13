@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长生十二宫</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: rgba(245, 245, 245, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            font-weight: 300;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        table {
+            width: 100%;
+            min-width: 400px;
+            border-collapse: collapse;
+            font-size: 12px;
+            background-color: #f5f5f5;
+            table-layout: fixed;
+        }
+        
+        /* 设置各列宽度 */
+        th:nth-child(1), td:nth-child(1) { width: 8%; }  /* 四季 */
+        th:nth-child(2), td:nth-child(2) { width: 8%; }  /* 五行 */
+        th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 长生 */
+        th:nth-child(4), td:nth-child(4) { width: 8%; }  /* 沐浴 */
+        th:nth-child(5), td:nth-child(5) { width: 8%; }  /* 冠带 */
+        th:nth-child(6), td:nth-child(6) { width: 8%; }  /* 临官 */
+        th:nth-child(7), td:nth-child(7) { width: 8%; }  /* 帝旺 */
+        th:nth-child(8), td:nth-child(8) { width: 4%; }  /* 衰 */
+        th:nth-child(9), td:nth-child(9) { width: 4%; }  /* 病 */
+        th:nth-child(10), td:nth-child(10) { width: 4%; } /* 死 */
+        th:nth-child(11), td:nth-child(11) { width: 4%; } /* 墓 */
+        th:nth-child(12), td:nth-child(12) { width: 4%; } /* 绝 */
+        th:nth-child(13), td:nth-child(13) { width: 4%; } /* 胎 */
+        th:nth-child(14), td:nth-child(14) { width: 4%; } /* 养 */
+        
+        th, td {
+            border: 1px solid #666;
+            padding: 6px 3px;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        
+        /* 春夏秋冬行高度调整 */
+        tr:nth-child(4), tr:nth-child(5), tr:nth-child(6), tr:nth-child(7) {
+            height: 50px;
+        }
+        
+        /* 长生列内容换行显示 */
+        td:nth-child(3) {
+            white-space: normal;
+            line-height: 1.2;
+        }
+        
+        /* 括号内容小字号 */
+        .parenthesis {
+            font-size: 0.8em;
+            color: #555;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            color: #ffffff;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            font-size: 11px;
+        }
+        
+        .merged-row {
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            font-weight: 600;
+        }
+        
+        .merged-row td {
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            color: #333;
+            white-space: normal;
+            text-align: left;
+            padding: 10px;
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                padding: 15px;
+                margin: 5px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 15px;
+            }
+            
+            table {
+                font-size: 10px;
+                min-width: 320px;
+            }
+            
+            th, td {
+                padding: 4px 2px;
+            }
+            
+            th {
+                font-size: 9px;
+            }
+            
+            .merged-row td {
+                font-size: 11px;
+                padding: 8px;
+            }
+            
+            /* 移动端列宽设置 */
+            th:nth-child(1), td:nth-child(1) { width: 8%; }  /* 四季 */
+            th:nth-child(2), td:nth-child(2) { width: 8%; }  /* 五行 */
+            th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 长生 */
+            th:nth-child(4), td:nth-child(4) { width: 8%; }  /* 沐浴 */
+            th:nth-child(5), td:nth-child(5) { width: 8%; }  /* 冠带 */
+            th:nth-child(6), td:nth-child(6) { width: 8%; }  /* 临官 */
+            th:nth-child(7), td:nth-child(7) { width: 8%; }  /* 帝旺 */
+            th:nth-child(8), td:nth-child(8) { width: 4%; }  /* 衰 */
+            th:nth-child(9), td:nth-child(9) { width: 4%; }  /* 病 */
+            th:nth-child(10), td:nth-child(10) { width: 4%; } /* 死 */
+            th:nth-child(11), td:nth-child(11) { width: 4%; } /* 墓 */
+            th:nth-child(12), td:nth-child(12) { width: 4%; } /* 绝 */
+            th:nth-child(13), td:nth-child(13) { width: 4%; } /* 胎 */
+            th:nth-child(14), td:nth-child(14) { width: 4%; } /* 养 */
+            
+            /* 移动端春夏秋冬行高度调整 */
+            tr:nth-child(4), tr:nth-child(5), tr:nth-child(6), tr:nth-child(7) {
+                height: 45px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+                margin: 2px;
+            }
+            
+            h1 {
+                font-size: 1.3em;
+                margin-bottom: 10px;
+            }
+            
+            table {
+                font-size: 9px;
+                min-width: 280px;
+            }
+            
+            th, td {
+                padding: 3px 1px;
+            }
+            
+            th {
+                font-size: 8px;
+            }
+            
+            .merged-row td {
+                font-size: 10px;
+                padding: 6px;
+            }
+            
+            /* 小屏幕列宽设置 */
+            th:nth-child(1), td:nth-child(1) { width: 8%; }  /* 四季 */
+            th:nth-child(2), td:nth-child(2) { width: 8%; }  /* 五行 */
+            th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 长生 */
+            th:nth-child(4), td:nth-child(4) { width: 8%; }  /* 沐浴 */
+            th:nth-child(5), td:nth-child(5) { width: 8%; }  /* 冠带 */
+            th:nth-child(6), td:nth-child(6) { width: 8%; }  /* 临官 */
+            th:nth-child(7), td:nth-child(7) { width: 8%; }  /* 帝旺 */
+            th:nth-child(8), td:nth-child(8) { width: 4%; }  /* 衰 */
+            th:nth-child(9), td:nth-child(9) { width: 4%; }  /* 病 */
+            th:nth-child(10), td:nth-child(10) { width: 4%; } /* 死 */
+            th:nth-child(11), td:nth-child(11) { width: 4%; } /* 墓 */
+            th:nth-child(12), td:nth-child(12) { width: 4%; } /* 绝 */
+            th:nth-child(13), td:nth-child(13) { width: 4%; } /* 胎 */
+            th:nth-child(14), td:nth-child(14) { width: 4%; } /* 养 */
+            
+            /* 小屏幕春夏秋冬行高度调整 */
+            tr:nth-child(4), tr:nth-child(5), tr:nth-child(6), tr:nth-child(7) {
+                height: 40px;
+            }
+        }
+        
+        /* 超小屏幕优化 */
+        @media (max-width: 360px) {
+            table {
+                font-size: 8px;
+                min-width: 240px;
+            }
+            
+            th, td {
+                padding: 2px 1px;
+            }
+            
+            th {
+                font-size: 7px;
+            }
+            
+            .merged-row td {
+                font-size: 9px;
+                padding: 5px;
+            }
+            
+            /* 超小屏幕列宽设置 */
+            th:nth-child(1), td:nth-child(1) { width: 8%; }  /* 四季 */
+            th:nth-child(2), td:nth-child(2) { width: 8%; }  /* 五行 */
+            th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 长生 */
+            th:nth-child(4), td:nth-child(4) { width: 8%; }  /* 沐浴 */
+            th:nth-child(5), td:nth-child(5) { width: 8%; }  /* 冠带 */
+            th:nth-child(6), td:nth-child(6) { width: 8%; }  /* 临官 */
+            th:nth-child(7), td:nth-child(7) { width: 8%; }  /* 帝旺 */
+            th:nth-child(8), td:nth-child(8) { width: 4%; }  /* 衰 */
+            th:nth-child(9), td:nth-child(9) { width: 4%; }  /* 病 */
+            th:nth-child(10), td:nth-child(10) { width: 4%; } /* 死 */
+            th:nth-child(11), td:nth-child(11) { width: 4%; } /* 墓 */
+            th:nth-child(12), td:nth-child(12) { width: 4%; } /* 绝 */
+            th:nth-child(13), td:nth-child(13) { width: 4%; } /* 胎 */
+            th:nth-child(14), td:nth-child(14) { width: 4%; } /* 养 */
+            
+            /* 超小屏幕春夏秋冬行高度调整 */
+            tr:nth-child(4), tr:nth-child(5), tr:nth-child(6), tr:nth-child(7) {
+                height: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>长生十二宫</h1>
+        
+        <div class="table-container">
+            <table>
+            <tr class="merged-row">
+                <td colspan="14">长生十二宫：地支的十二种状态，具体为长生、沐浴、冠带、临官、帝旺、衰、病、死、墓、绝、胎、养十二个状态，寓意着事物从生到灭循环往复的运动规律</td>
+            </tr>
+            <tr>
+                <td>四季</td>
+                <td>五行</td>
+                <td>长生</td>
+                <td>沐浴</td>
+                <td>冠带</td>
+                <td>临官</td>
+                <td>帝旺</td>
+                <td>衰</td>
+                <td>病</td>
+                <td>死</td>
+                <td>墓</td>
+                <td>绝</td>
+                <td>胎</td>
+                <td>养</td>
+            </tr>
+            <tr class="merged-row">
+                <td colspan="14" style="text-align: left;">
+                    <strong>墓库：</strong>库是掩埋/躲藏/躲避，入墓是藏在某个地方，元神入墓是心智未开，元神指人的思维<br>
+                    <strong>十二长生：</strong>长生和墓用得最多，其他用得少
+                </td>
+            </tr>
+            <tr>
+                <td>秋</td>
+                <td>金</td>
+                <td>巳</td>
+                <td>午</td>
+                <td>未</td>
+                <td>申</td>
+                <td>酉</td>
+                <td>戌</td>
+                <td>亥</td>
+                <td>子</td>
+                <td>丑</td>
+                <td>寅</td>
+                <td>卯</td>
+                <td>辰</td>
+            </tr>
+            <tr>
+                <td>春</td>
+                <td>木</td>
+                <td>亥</td>
+                <td>子</td>
+                <td>丑</td>
+                <td>寅</td>
+                <td>卯</td>
+                <td>辰</td>
+                <td>巳</td>
+                <td>午</td>
+                <td>未</td>
+                <td>申</td>
+                <td>酉</td>
+                <td>戌</td>
+            </tr>
+            <tr>
+                <td>夏</td>
+                <td>火</td>
+                <td>寅</td>
+                <td>卯</td>
+                <td>辰</td>
+                <td>巳</td>
+                <td>午</td>
+                <td>未</td>
+                <td>申</td>
+                <td>酉</td>
+                <td>戌</td>
+                <td>亥</td>
+                <td>子</td>
+                <td>丑</td>
+            </tr>
+            <tr>
+                <td>冬</td>
+                <td>水</td>
+                <td>酉</td>
+                <td>戌</td>
+                <td>亥</td>
+                <td>子</td>
+                <td>丑</td>
+                <td>寅</td>
+                <td>卯</td>
+                <td>辰</td>
+                <td>巳</td>
+                <td>午</td>
+                <td>未</td>
+                <td>申</td>
+            </tr>
+            <tr>
+                <td rowspan="2"></td>
+                <td rowspan="2">土</td>
+                <td>酉</td>
+                <td>戌</td>
+                <td>亥</td>
+                <td>子</td>
+                <td>丑</td>
+                <td>寅</td>
+                <td>卯</td>
+                <td>辰</td>
+                <td>巳</td>
+                <td>午</td>
+                <td>未</td>
+                <td>申</td>
+            </tr>
+            <tr class="merged-row">
+                <td colspan="12">八字：土借火位；六爻：土借水位（所以十二长生和水相同）</td>
+            </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
