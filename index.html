@@ -8753,6 +8753,10 @@
 	<script>
 		// 等待页面加载完成
 		document.addEventListener('DOMContentLoaded', function() {
+			// 创建 SupabaseService 实例
+			window.supabaseService = new SupabaseService();
+			console.log('SupabaseService 实例已创建');
+			
 			// 等待 supabaseService 初始化完成
 			waitForSupabaseService();
 			
@@ -8921,6 +8925,24 @@
 					}
 					
 					console.log('开始登录...');
+					
+					// 等待 supabaseService 初始化完成
+					if (!window.supabaseService) {
+						console.log('等待 supabaseService 初始化...');
+						await new Promise(resolve => {
+							const checkService = () => {
+								if (window.supabaseService) {
+									resolve();
+								} else {
+									setTimeout(checkService, 100);
+								}
+							};
+							checkService();
+						});
+					}
+					
+					console.log('supabaseService 状态:', !!window.supabaseService);
+					
 					try {
 						const result = await window.supabaseService.login(email, password);
 						console.log('登录结果:', result);
