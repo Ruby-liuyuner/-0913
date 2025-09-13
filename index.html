@@ -1724,17 +1724,21 @@
 				<div class="card">
 					<div style="text-align: center; padding: 20px;">
 						<!-- 用户状态显示 -->
-						<div id="profileUserInfo" style="display: none; margin-bottom: 20px;">
+						<div id="profileUserInfo" style="display: none; margin-bottom: 20px; margin-top: -20px;">
 							<div style="font-size: 18px; color: #333; margin-bottom: 10px;">欢迎回来</div>
 							<div id="profileUserEmail" style="color: #666; font-size: 14px; margin-bottom: 20px;"></div>
-							<button id="profileLogoutBtn" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px;">退出登录</button>
+							
+							<!-- 密码管理按钮 -->
+							<div style="margin-bottom: 15px;">
+								<button id="changePasswordBtn" style="background: #555; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 10px;">修改密码</button>
+								<button id="profileLogoutBtn" style="background: #333; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">退出登录</button>
+							</div>
 						</div>
 						
 						<!-- 未登录状态 -->
 						<div id="profileLoginPrompt" style="margin-bottom: 20px;">
 							<div style="font-size: 16px; color: #333; margin-bottom: 15px;">登录后可保存排盘记录到云端</div>
-							<button id="profileLoginBtn" style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; margin-right: 10px;">登录/注册</button>
-							<button id="testLoginBtn" onclick="testLogin()" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">快速登录</button>
+							<button id="profileLoginBtn" style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">登录/注册</button>
 						</div>
 						
 						<!-- 功能说明 -->
@@ -2421,7 +2425,7 @@
 		}
 
 		// 保存当前排盘记录
-		function saveCurrentRecord() {
+		async function saveCurrentRecord() {
 			console.log("saveCurrentRecord函数开始执行");
 			// 获取当前排盘信息
 			const question = document.getElementById('questionText').value || '未填写';
@@ -2464,6 +2468,35 @@
 				}
 			};
 			
+			// 检查用户是否已登录
+			if (window.supabaseService && window.supabaseService.currentUser) {
+				// 用户已登录，保存到云端
+				console.log("用户已登录，保存到云端");
+				try {
+					const result = await window.supabaseService.savePaipanRecord(record);
+					if (result.success) {
+						showMessage('排盘记录已保存到云端！', 'success');
+					} else {
+						showMessage('云端保存失败，已保存到本地：' + result.error, 'warning');
+						// 云端保存失败，仍然保存到本地
+						saveToLocalStorage(record);
+					}
+				} catch (error) {
+					console.error('云端保存出错:', error);
+					showMessage('云端保存出错，已保存到本地：' + error.message, 'warning');
+					// 云端保存出错，仍然保存到本地
+					saveToLocalStorage(record);
+				}
+			} else {
+				// 用户未登录，提示登录
+				showMessage('请先登录后再保存排盘记录到云端', 'warning');
+				// 仍然保存到本地
+				saveToLocalStorage(record);
+			}
+		}
+		
+		// 保存到本地存储的辅助函数
+		function saveToLocalStorage(record) {
 			// 获取现有记录
 			let records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
 			
@@ -5998,7 +6031,6 @@
 			html += "<div style='text-align: center; margin-top: -45px; display: flex; justify-content: center; gap: 12px;'>";
 			html += "<button id='resetBtn' style='padding: 8px 16px; font-size: 14px; background-color: #000000; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; min-width: 100px;'>重新排盘</button>";
 			html += "<button id='saveRecordBtn' style='padding: 8px 16px; font-size: 14px; background-color: #000000; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; min-width: 100px;'>保存记录</button>";
-			html += "<button id='saveToCloudBtn' style='padding: 8px 16px; font-size: 14px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; min-width: 120px; display: none;'>💾 保存到云端</button>";
 			html += "</div>";
 
 			document.getElementById("guaResult").innerHTML = html;
@@ -6008,11 +6040,6 @@
 				initDuanguaNotes();
 			}, 50);
 			
-			// 绑定保存到云端按钮事件
-			const saveToCloudBtn = document.getElementById('saveToCloudBtn');
-			if (saveToCloudBtn) {
-				saveToCloudBtn.addEventListener('click', savePaipanToCloud);
-			}
 			
 			// 触发排盘完成事件
 			document.dispatchEvent(new CustomEvent('paipanCompleted'));
@@ -8557,7 +8584,7 @@
 	
 	<!-- 认证模态框 -->
 	<div id="authModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
-		<div style="background: white; border-radius: 15px; padding: 40px; width: 100%; max-width: 400px; position: relative;">
+		<div style="background: white; border-radius: 15px; padding: 40px; width: 80%; max-width: 500px; position: relative;">
 			<div style="text-align: center; margin-bottom: 30px;">
 				<h1 style="color: #333; font-size: 2em; margin-bottom: 10px;">用户认证</h1>
 				<p style="color: #666; font-size: 0.9em;">登录后可保存排盘记录到云端</p>
@@ -8572,10 +8599,13 @@
 					<label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">密码</label>
 					<input type="password" id="loginPassword" placeholder="请输入密码" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
 				</div>
-				<button id="loginSubmitBtn" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-bottom: 15px;">登录</button>
+				<button id="loginSubmitBtn" style="width: 100%; padding: 12px; background: #555; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-bottom: 15px;">登录</button>
+				<div style="text-align: center; margin-bottom: 10px;">
+					<button id="forgotPasswordBtn" style="background: none; border: none; color: #666; cursor: pointer; text-decoration: underline; font-size: 14px;">忘记密码？</button>
+				</div>
 				<div style="text-align: center;">
 					<span style="color: #666;">还没有账户？</span>
-					<button id="switchToRegister" style="background: none; border: none; color: #007bff; cursor: pointer; text-decoration: underline;">立即注册</button>
+					<button id="switchToRegister" style="background: none; border: none; color: #555; cursor: pointer; text-decoration: underline;">立即注册</button>
 				</div>
 			</div>
 			
@@ -8588,10 +8618,29 @@
 					<label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">密码</label>
 					<input type="password" id="registerPassword" placeholder="请输入密码（至少6位）" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
 				</div>
-				<button id="registerSubmitBtn" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-bottom: 15px;">注册</button>
+				<button id="registerSubmitBtn" style="width: 100%; padding: 12px; background: #555; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-bottom: 15px;">注册</button>
 				<div style="text-align: center;">
 					<span style="color: #666;">已有账户？</span>
-					<button id="switchToLogin" style="background: none; border: none; color: #007bff; cursor: pointer; text-decoration: underline;">立即登录</button>
+					<button id="switchToLogin" style="background: none; border: none; color: #555; cursor: pointer; text-decoration: underline;">立即登录</button>
+				</div>
+			</div>
+			
+			<div id="changePasswordForm" style="display: none;">
+				<div style="margin-bottom: 20px;">
+					<label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">当前密码</label>
+					<input type="password" id="currentPassword" placeholder="请输入当前密码" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+				</div>
+				<div style="margin-bottom: 20px;">
+					<label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">新密码</label>
+					<input type="password" id="newPassword" placeholder="请输入新密码（至少6位）" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+				</div>
+				<div style="margin-bottom: 20px;">
+					<label style="display: block; margin-bottom: 5px; color: #333; font-weight: 500;">确认新密码</label>
+					<input type="password" id="confirmNewPassword" placeholder="请再次输入新密码" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+				</div>
+				<button id="changePasswordSubmitBtn" style="width: 100%; padding: 12px; background: #555; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-bottom: 15px;">修改密码</button>
+				<div style="text-align: center;">
+					<button id="switchToLoginFromChange" style="background: none; border: none; color: #555; cursor: pointer; text-decoration: underline;">返回登录</button>
 				</div>
 			</div>
 			
@@ -8648,27 +8697,6 @@
 			}
 		}
 		
-		// 全局测试登录函数
-		async function testLogin() {
-			console.log('全局测试登录函数被调用');
-			try {
-				// 使用你的真实邮箱
-				const testEmail = 'liuyuner00@163.com';
-				const testPassword = '123456';
-				
-				console.log('尝试直接登录...');
-				// 直接尝试登录
-				const loginResult = await window.supabaseService.login(testEmail, testPassword);
-				if (loginResult.success) {
-					showMessage('登录成功！欢迎回来！', 'success');
-					updateUserStatus();
-				} else {
-					showMessage('登录失败：' + loginResult.error, 'error');
-				}
-			} catch (error) {
-				showMessage('登录错误：' + error.message, 'error');
-			}
-		}
 		
 		// 登录按钮点击处理函数
 		function handleLoginClick(event) {
@@ -8689,9 +8717,6 @@
 				profileLoginBtn.addEventListener('click', handleLoginClick);
 			}
 			
-			// 测试登录按钮使用 onclick 事件，不需要 addEventListener
-			const testLoginBtn = document.getElementById('testLoginBtn');
-			console.log('测试登录按钮元素:', testLoginBtn);
 			
 			// 绑定退出登录按钮事件
 			const profileLogoutBtn = document.getElementById('profileLogoutBtn');
@@ -8699,6 +8724,39 @@
 				profileLogoutBtn.addEventListener('click', async function() {
 					await window.supabaseService.logout();
 					updateUserStatus();
+				});
+			}
+			
+			// 绑定修改密码按钮事件
+			const changePasswordBtn = document.getElementById('changePasswordBtn');
+			if (changePasswordBtn) {
+				changePasswordBtn.addEventListener('click', function() {
+					// 显示修改密码表单
+					document.getElementById('loginForm').style.display = 'none';
+					document.getElementById('registerForm').style.display = 'none';
+					document.getElementById('changePasswordForm').style.display = 'block';
+					document.getElementById('authModal').style.display = 'flex';
+				});
+			}
+			
+			// 绑定忘记密码按钮事件
+			const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+			if (forgotPasswordBtn) {
+				forgotPasswordBtn.addEventListener('click', async function(e) {
+					e.preventDefault();
+					const email = document.getElementById('loginEmail').value;
+					if (!email) {
+						showMessage('请先输入邮箱地址', 'warning');
+						return;
+					}
+					
+					const result = await window.supabaseService.resetPassword(email);
+					if (result.success) {
+						showMessage('密码重置邮件已发送！请检查邮箱（包括垃圾邮件文件夹）并点击邮件中的链接重置密码。', 'success');
+						document.getElementById('authModal').style.display = 'none';
+					} else {
+						showMessage('发送失败：' + result.error, 'error');
+					}
 				});
 			}
 			
@@ -8727,6 +8785,15 @@
 				});
 			}
 			
+			// 绑定修改密码表单切换事件
+			const switchToLoginFromChange = document.getElementById('switchToLoginFromChange');
+			if (switchToLoginFromChange) {
+				switchToLoginFromChange.addEventListener('click', function() {
+					document.getElementById('changePasswordForm').style.display = 'none';
+					document.getElementById('loginForm').style.display = 'block';
+				});
+			}
+			
 			// 绑定登录提交事件
 			const loginSubmitBtn = document.getElementById('loginSubmitBtn');
 			if (loginSubmitBtn) {
@@ -8741,11 +8808,18 @@
 					
 					const result = await window.supabaseService.login(email, password);
 					if (result.success) {
+						// 手动更新用户状态
+						window.supabaseService.currentUser = result.user;
 						showMessage('登录成功！', 'success');
 						document.getElementById('authModal').style.display = 'none';
 						updateUserStatus();
 					} else {
-						showMessage('登录失败：' + result.error, 'error');
+						// 检查是否需要邮箱确认
+						if (result.needsConfirmation) {
+							showMessage('邮箱未确认，请检查邮箱并点击确认链接后再登录', 'warning');
+						} else {
+							showMessage('登录失败：' + result.error, 'error');
+						}
 					}
 				});
 			}
@@ -8768,19 +8842,21 @@
 					}
 					
 					try {
-						// 在开发环境中，使用 Gmail 邮箱进行测试以避免频率限制
-						let testEmail = email;
-						if (email.includes('@163.com') && email.includes('liuyuner')) {
-							const randomSuffix = Math.floor(Math.random() * 10000);
-							testEmail = `test${randomSuffix}@gmail.com`;
-							console.log('使用测试邮箱:', testEmail);
-						}
+						console.log('开始注册:', email);
+						const result = await window.supabaseService.register(email, password);
+						console.log('注册结果:', result);
 						
-						const result = await window.supabaseService.register(testEmail, password);
 						if (result.success) {
+							// 手动更新用户状态
+							window.supabaseService.currentUser = result.user;
+							console.log('注册成功，用户信息:', result.user);
 							showMessage('注册成功！用户已自动登录', 'success');
-							document.getElementById('authModal').style.display = 'none';
-							updateUserStatus();
+							
+							// 延迟关闭模态框，让用户看到消息
+							setTimeout(() => {
+								document.getElementById('authModal').style.display = 'none';
+								updateUserStatus();
+							}, 2000);
 						} else {
 							// 检查是否是频率限制错误
 							if (result.isRateLimited) {
@@ -8791,6 +8867,47 @@
 						}
 					} catch (error) {
 						showMessage('注册过程中发生错误：' + error.message, 'error');
+					}
+				});
+			}
+			
+			// 绑定修改密码提交事件
+			const changePasswordSubmitBtn = document.getElementById('changePasswordSubmitBtn');
+			if (changePasswordSubmitBtn) {
+				changePasswordSubmitBtn.addEventListener('click', async function() {
+					const currentPassword = document.getElementById('currentPassword').value;
+					const newPassword = document.getElementById('newPassword').value;
+					const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+					
+					if (!currentPassword || !newPassword || !confirmNewPassword) {
+						showMessage('请填写所有字段', 'error');
+						return;
+					}
+					
+					if (newPassword.length < 6) {
+						showMessage('新密码至少需要6位', 'error');
+						return;
+					}
+					
+					if (newPassword !== confirmNewPassword) {
+						showMessage('两次输入的新密码不一致', 'error');
+						return;
+					}
+					
+					try {
+						const result = await window.supabaseService.changePassword(currentPassword, newPassword);
+						if (result.success) {
+							showMessage('密码修改成功！', 'success');
+							document.getElementById('authModal').style.display = 'none';
+							// 清空表单
+							document.getElementById('currentPassword').value = '';
+							document.getElementById('newPassword').value = '';
+							document.getElementById('confirmNewPassword').value = '';
+						} else {
+							showMessage('密码修改失败：' + result.error, 'error');
+						}
+					} catch (error) {
+						showMessage('密码修改过程中发生错误：' + error.message, 'error');
 					}
 				});
 			}
@@ -8808,7 +8925,6 @@
 			const profileUserInfo = document.getElementById('profileUserInfo');
 			const profileLoginPrompt = document.getElementById('profileLoginPrompt');
 			const profileUserEmail = document.getElementById('profileUserEmail');
-			const saveToCloudBtn = document.getElementById('saveToCloudBtn');
 			
 			if (window.supabaseService && window.supabaseService.currentUser) {
 				// 已登录状态
@@ -8821,9 +8937,6 @@
 				if (profileLoginPrompt) {
 					profileLoginPrompt.style.display = 'none';
 				}
-				if (saveToCloudBtn) {
-					saveToCloudBtn.style.display = 'inline-block';
-				}
 			} else {
 				// 未登录状态
 				if (profileUserInfo) {
@@ -8831,9 +8944,6 @@
 				}
 				if (profileLoginPrompt) {
 					profileLoginPrompt.style.display = 'block';
-				}
-				if (saveToCloudBtn) {
-					saveToCloudBtn.style.display = 'none';
 				}
 			}
 		}
