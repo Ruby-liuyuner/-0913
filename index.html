@@ -1204,7 +1204,7 @@
 			padding: 20px;
 			max-width: 1200px;
 			margin: 0 auto;
-			padding-top: 80px; /* 为固定导航栏留出空间 */
+			padding-top: 20px; /* 减少顶部间距 */
 		}
 		
 		/* 排盘子板块导航 */
@@ -1314,6 +1314,12 @@
 			align-items: center;
 			gap: 12px;
 			border-bottom: 1px solid #4b5563;
+		}
+		
+		/* 记录详情页面特殊样式 - 减少顶部留白 */
+		#view-record-tab {
+			padding-top: 0 !important;
+			margin-top: -60px !important;
 		}
 		
 		.back-button {
@@ -1721,36 +1727,23 @@
 			</div>
 			
 			<div class="tools-container">
-				<div class="card">
-					<div style="text-align: center; padding: 20px;">
-						<!-- 用户状态显示 -->
-						<div id="profileUserInfo" style="display: none; margin-bottom: 20px; margin-top: -20px;">
-							<div style="font-size: 18px; color: #333; margin-bottom: 10px;">欢迎回来</div>
-							<div id="profileUserEmail" style="color: #666; font-size: 14px; margin-bottom: 20px;"></div>
-							
-							<!-- 密码管理按钮 -->
-							<div style="margin-bottom: 15px;">
-								<button id="changePasswordBtn" style="background: #555; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 10px;">修改密码</button>
-								<button id="profileLogoutBtn" style="background: #333; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">退出登录</button>
-							</div>
-						</div>
+				<div style="text-align: center; padding: 20px;">
+					<!-- 用户状态显示 -->
+					<div id="profileUserInfo" style="display: none; margin-bottom: 20px; margin-top: -20px;">
+						<div style="font-size: 18px; color: #333; margin-bottom: 10px;">欢迎回来</div>
+						<div id="profileUserEmail" style="color: #666; font-size: 14px; margin-bottom: 20px;"></div>
 						
-						<!-- 未登录状态 -->
-						<div id="profileLoginPrompt" style="margin-bottom: 20px;">
-							<div style="font-size: 16px; color: #333; margin-bottom: 15px;">登录后可保存排盘记录到云端</div>
-							<button id="profileLoginBtn" style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">登录/注册</button>
+						<!-- 密码管理按钮 -->
+						<div style="margin-bottom: 15px;">
+							<button id="changePasswordBtn" style="background: #555; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 10px;">修改密码</button>
+							<button id="profileLogoutBtn" style="background: #333; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">退出登录</button>
 						</div>
-						
-						<!-- 功能说明 -->
-						<div style="margin-top: 30px; text-align: left;">
-							<h3 style="color: #333; margin-bottom: 15px;">云端同步功能</h3>
-							<div style="color: #666; line-height: 1.6;">
-								<div style="margin-bottom: 10px;">• 排盘记录：每次排盘后可以保存到云端</div>
-								<div style="margin-bottom: 10px;">• 练习进度：练习完成后自动保存到云端</div>
-								<div style="margin-bottom: 10px;">• 电子书笔记：登录后右下角会出现笔记面板</div>
-								<div style="margin-bottom: 10px;">• 数据安全：所有数据都经过加密存储</div>
-							</div>
-						</div>
+					</div>
+					
+					<!-- 未登录状态 -->
+					<div id="profileLoginPrompt" style="margin-bottom: 20px;">
+						<div style="font-size: 16px; color: #333; margin-bottom: 15px;">登录后可保存排盘记录到云端</div>
+						<button id="profileLoginBtn" style="background: #555; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">登录/注册</button>
 					</div>
 				</div>
 			</div>
@@ -2427,6 +2420,7 @@
 		// 保存当前排盘记录
 		async function saveCurrentRecord() {
 			console.log("saveCurrentRecord函数开始执行");
+			try {
 			// 获取当前排盘信息
 			const question = document.getElementById('questionText').value || '未填写';
 			const yongshen = document.getElementById('yongshenText').value || '未选择';
@@ -2468,30 +2462,36 @@
 				}
 			};
 			
-			// 检查用户是否已登录
-			if (window.supabaseService && window.supabaseService.currentUser) {
-				// 用户已登录，保存到云端
-				console.log("用户已登录，保存到云端");
-				try {
-					const result = await window.supabaseService.savePaipanRecord(record);
-					if (result.success) {
-						showMessage('排盘记录已保存到云端！', 'success');
-					} else {
-						showMessage('云端保存失败，已保存到本地：' + result.error, 'warning');
-						// 云端保存失败，仍然保存到本地
+				console.log("创建的记录对象:", record);
+				
+				// 检查用户是否已登录
+				if (window.supabaseService && window.supabaseService.currentUser) {
+					// 用户已登录，保存到云端
+					console.log("用户已登录，保存到云端");
+					try {
+						const result = await window.supabaseService.savePaipanRecord(record);
+						if (result.success) {
+							alert('排盘记录已保存到云端！');
+						} else {
+							alert('云端保存失败，已保存到本地：' + result.error);
+							// 云端保存失败，仍然保存到本地
+							saveToLocalStorage(record);
+						}
+					} catch (error) {
+						console.error('云端保存出错:', error);
+						alert('云端保存出错，已保存到本地：' + error.message);
+						// 云端保存出错，仍然保存到本地
 						saveToLocalStorage(record);
 					}
-				} catch (error) {
-					console.error('云端保存出错:', error);
-					showMessage('云端保存出错，已保存到本地：' + error.message, 'warning');
-					// 云端保存出错，仍然保存到本地
+				} else {
+					// 用户未登录，提示登录
+					alert('请先登录后再保存排盘记录到云端');
+					// 仍然保存到本地
 					saveToLocalStorage(record);
 				}
-			} else {
-				// 用户未登录，提示登录
-				showMessage('请先登录后再保存排盘记录到云端', 'warning');
-				// 仍然保存到本地
-				saveToLocalStorage(record);
+			} catch (error) {
+				console.error('saveCurrentRecord函数出错:', error);
+				alert('保存失败：' + error.message);
 			}
 		}
 		
@@ -6325,6 +6325,7 @@
 			document.getElementById("saveRecordBtn").addEventListener("click", function() {
 				// 保存当前排盘记录的功能
 				console.log("保存记录按钮被点击了");
+				console.log("开始调用 saveCurrentRecord 函数");
 				saveCurrentRecord();
 			});
 		}
@@ -6862,12 +6863,39 @@
 		
 		
 		// 加载排盘记录
-		window.loadRecords = function() {
+		window.loadRecords = async function() {
 			console.log("loadRecords函数开始执行");
-			const records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
-			console.log("从localStorage获取的记录:", records);
 			const recordList = document.querySelector('.record-list');
 			console.log("找到的记录列表元素:", recordList);
+			
+			let records = [];
+			
+			// 检查用户是否已登录
+			if (window.supabaseService && window.supabaseService.currentUser) {
+				// 用户已登录，从云端加载数据
+				console.log("用户已登录，从云端加载记录");
+				try {
+					const result = await window.supabaseService.getPaipanRecords();
+					if (result.success) {
+						records = result.data || [];
+						console.log("从云端获取的记录:", records);
+					} else {
+						console.error("云端加载失败:", result.error);
+						// 云端加载失败，使用本地数据
+						records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
+					}
+				} catch (error) {
+					console.error("云端加载出错:", error);
+					// 云端加载出错，使用本地数据
+					records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
+				}
+			} else {
+				// 用户未登录，使用本地数据
+				console.log("用户未登录，从本地加载记录");
+				records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
+			}
+			
+			console.log("最终使用的记录:", records);
 			
 			if (records.length === 0) {
 				recordList.innerHTML = `
@@ -6900,9 +6928,31 @@
 		};
 		
 		// 查看记录
-		window.viewRecord = function(recordId) {
-			const records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
+		window.viewRecord = async function(recordId) {
+			let records = [];
+			
+			// 检查用户是否已登录
+			if (window.supabaseService && window.supabaseService.currentUser) {
+				// 用户已登录，从云端加载数据
+				try {
+					const result = await window.supabaseService.getPaipanRecords();
+					if (result.success) {
+						records = result.data || [];
+					} else {
+						// 云端加载失败，使用本地数据
+						records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
+					}
+				} catch (error) {
+					// 云端加载出错，使用本地数据
+					records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
+				}
+			} else {
+				// 用户未登录，使用本地数据
+				records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
+			}
+			
 			const record = records.find(r => r.id === recordId);
+			console.log("找到的记录:", record);
 			if (record) {
 				// 隐藏所有标签页内容
 				document.querySelectorAll('.tab-content').forEach(tab => {
@@ -6912,26 +6962,44 @@
 				// 获取查看记录的标签页
 				const viewTab = document.getElementById('view-record-tab');
 				
+				// 处理云端数据和本地数据的差异
+				const question = record.question || '未填写';
+				const yongshen = record.yongshen || record.gua_data?.yongshen || '未选择';
+				const time = record.time || '时间未知';
+				// 优先使用 fullGuaContent，然后是 gua_data.fullGuaContent，最后是 gua_data.html
+				const fullGuaContent = record.fullGuaContent || 
+					record.gua_data?.fullGuaContent || 
+					record.gua_data?.html || 
+					'<p>暂无排盘内容</p>';
+				
+				console.log("处理后的数据:", { question, yongshen, time, fullGuaContent });
+				
 				// 设置查看记录页面的内容
 				viewTab.innerHTML = `
-					<div style="padding: 20px;">
-						<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-								<h2 style="margin: 0; color: #333;">排盘记录详情</h2>
-								<button onclick="backToRecordList()" style="padding: 8px 16px; background-color: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">返回记录列表</button>
+					<!-- 排盘记录导航栏 -->
+					<div class="paipan-nav">
+						<div class="paipan-nav-item active">排盘记录</div>
+					</div>
+					
+					<div class="paipan-container" style="padding-top: 20px;">
+						<div style="margin-bottom: 5px; padding: 8px 20px 5px 20px; border-bottom: 1px solid #eee; background: #f8f9fa;">
+							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+								<h2 style="margin: 0; color: #333; font-size: 16px;">排盘记录详情</h2>
+								<button onclick="backToRecordList()" style="padding: 6px 12px; background-color: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">返回</button>
 							</div>
 							<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
 								<div>
-									<p><strong>问事：</strong>${record.question}</p>
-									<p><strong>用神：</strong>${record.yongshen}</p>
+									<p><strong>问事：</strong>${question}</p>
+									<p><strong>用神：</strong>${yongshen}</p>
 								</div>
 								<div>
-									<p><strong>时间：</strong>${record.time}</p>
+									<p><strong>时间：</strong>${time}</p>
 								</div>
 							</div>
 						</div>
-						<div class="record-gua-content">
-							${record.fullGuaContent || '<p>暂无排盘内容</p>'}
+						<div class="record-gua-content" style="margin-top: 10px; padding: 15px 20px; background: #f8f9fa; border-radius: 8px;">
+							${fullGuaContent}
+						</div>
 						</div>
 					</div>
 				`;
@@ -6943,6 +7011,9 @@
 				setTimeout(() => {
 					rebindViewRecordEvents(viewTab);
 				}, 100);
+			} else {
+				console.error("未找到记录，recordId:", recordId);
+				alert('未找到该记录');
 			}
 		};
 		
@@ -6965,12 +7036,34 @@
 		};
 		
 		// 删除记录
-		window.deleteRecord = function(recordId) {
+		window.deleteRecord = async function(recordId) {
 			if (confirm('确定要删除这条记录吗？')) {
+				try {
+					// 检查用户是否已登录
+					if (window.supabaseService && window.supabaseService.currentUser) {
+						// 用户已登录，从云端删除
+						console.log("用户已登录，从云端删除记录:", recordId);
+						const result = await window.supabaseService.deletePaipanRecord(recordId);
+						if (result.success) {
+							console.log("云端删除成功");
+						} else {
+							console.error("云端删除失败:", result.error);
+						}
+					}
+					
+					// 无论云端删除是否成功，都删除本地数据
 				let records = JSON.parse(localStorage.getItem('liuyaoRecords') || '[]');
 				records = records.filter(r => r.id !== recordId);
 				localStorage.setItem('liuyaoRecords', JSON.stringify(records));
+					
+					// 重新加载记录列表
 				loadRecords();
+					
+					// 不再显示"记录已删除"的弹窗，因为用户已经确认了
+				} catch (error) {
+					console.error('删除记录出错:', error);
+					alert('删除失败：' + error.message);
+				}
 			}
 		};
 		
@@ -8582,12 +8675,12 @@
 	</script>
 	<script src="supabase-service.js"></script>
 	
+
 	<!-- 认证模态框 -->
 	<div id="authModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
 		<div style="background: white; border-radius: 15px; padding: 40px; width: 80%; max-width: 500px; position: relative;">
 			<div style="text-align: center; margin-bottom: 30px;">
 				<h1 style="color: #333; font-size: 2em; margin-bottom: 10px;">用户认证</h1>
-				<p style="color: #666; font-size: 0.9em;">登录后可保存排盘记录到云端</p>
 			</div>
 			
 			<div id="loginForm">
@@ -8744,20 +8837,29 @@
 			if (forgotPasswordBtn) {
 				forgotPasswordBtn.addEventListener('click', async function(e) {
 					e.preventDefault();
+					console.log('忘记密码按钮被点击');
 					const email = document.getElementById('loginEmail').value;
+					console.log('邮箱地址:', email);
 					if (!email) {
+						console.log('邮箱为空，显示警告');
 						showMessage('请先输入邮箱地址', 'warning');
 						return;
 					}
 					
+					console.log('开始发送密码重置邮件');
 					const result = await window.supabaseService.resetPassword(email);
+					console.log('密码重置结果:', result);
 					if (result.success) {
-						showMessage('密码重置邮件已发送！请检查邮箱（包括垃圾邮件文件夹）并点击邮件中的链接重置密码。', 'success');
+						console.log('密码重置成功，显示成功消息');
+						alert('密码重置邮件已发送！请检查邮箱（包括垃圾邮件文件夹）并点击邮件中的链接重置密码。');
 						document.getElementById('authModal').style.display = 'none';
 					} else {
-						showMessage('发送失败：' + result.error, 'error');
+						console.log('密码重置失败:', result.error);
+						alert('发送失败：' + result.error);
 					}
 				});
+			} else {
+				console.log('忘记密码按钮未找到');
 			}
 			
 			// 绑定关闭模态框事件
@@ -8925,7 +9027,6 @@
 			const profileUserInfo = document.getElementById('profileUserInfo');
 			const profileLoginPrompt = document.getElementById('profileLoginPrompt');
 			const profileUserEmail = document.getElementById('profileUserEmail');
-			
 			if (window.supabaseService && window.supabaseService.currentUser) {
 				// 已登录状态
 				if (profileUserEmail) {
@@ -8961,39 +9062,51 @@
 			}, 3000);
 		}
 		
-		// 保存排盘记录到云端
-		async function savePaipanToCloud() {
-			if (!window.supabaseService || !window.supabaseService.currentUser) {
-				alert('请先登录后再保存到云端');
-				return;
-			}
-			
-			try {
-				// 获取排盘数据
-				const question = document.getElementById('questionText').value || '';
-				const time = document.getElementById('timeText').value || '';
-				const guaData = {
-					question: question,
-					time: time,
-					// 这里可以添加更多排盘数据
-					html: document.getElementById('guaResult').innerHTML
-				};
-				
-				const result = await window.supabaseService.savePaipanRecord(question, time, guaData);
-				if (result.success) {
-					alert('排盘记录已保存到云端！');
-				} else {
-					alert('保存失败：' + result.error);
-				}
-			} catch (error) {
-				alert('保存失败：' + error.message);
-			}
-		}
-		
-		// 监听排盘完成事件，显示保存到云端按钮
+		// 监听排盘完成事件
 		document.addEventListener('paipanCompleted', function() {
 			updateUserStatus();
 		});
+		
+		// 监听来自iframe的消息（电子书笔记）
+		window.addEventListener('message', async function(event) {
+			console.log('收到iframe消息:', event.data, '来源:', event.origin);
+			
+			// 安全检查：确保消息来源
+			if (event.origin !== window.location.origin) {
+				console.log('消息来源不匹配，忽略:', event.origin, 'vs', window.location.origin);
+				return;
+			}
+			
+			if (event.data.type === 'saveBookNote') {
+				console.log('处理保存笔记请求:', event.data.data);
+				try {
+					if (window.supabaseService && window.supabaseService.currentUser) {
+						console.log('用户已登录，开始保存到云端');
+						const result = await window.supabaseService.saveBookNote(event.data.data);
+						if (result.success) {
+							console.log('电子书笔记已保存到云端');
+						} else {
+							console.log('电子书笔记云端保存失败:', result.error);
+						}
+					} else {
+						console.log('用户未登录，无法保存到云端');
+					}
+				} catch (error) {
+					console.log('电子书笔记云端保存出错:', error);
+				}
+			} else if (event.data.type === 'deleteBookNote') {
+				console.log('处理删除笔记请求:', event.data.data);
+				try {
+					if (window.supabaseService && window.supabaseService.currentUser) {
+						// 这里可以实现删除云端笔记的逻辑
+						console.log('请求删除云端笔记:', event.data.data.noteId);
+					}
+				} catch (error) {
+					console.log('电子书笔记云端删除出错:', error);
+				}
+			}
+		});
+		
 	</script>
 </body>
 </html>
