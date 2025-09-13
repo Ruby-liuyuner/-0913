@@ -8589,6 +8589,17 @@
 					};
 					iframe.onload = () => {
 						console.log('成功加载文件:', currentPath);
+						// 电子书加载完成后，如果用户已登录，立即同步笔记
+						if (window.supabaseService && window.supabaseService.currentUser) {
+							console.log('电子书加载完成，用户已登录，开始同步笔记');
+							setTimeout(() => {
+								// 修复file://协议下的postMessage问题
+								const targetOrigin = window.location.protocol === 'file:' ? '*' : window.location.origin;
+								iframe.contentWindow.postMessage({
+									type: 'syncNotesAfterLogin'
+								}, targetOrigin);
+							}, 500);
+						}
 					};
 				}
 				
@@ -8686,6 +8697,7 @@
 		class SupabaseService {
 			constructor() {
 				this.currentUser = null;
+				this.connectionError = false;
 				this.init();
 			}
 			
@@ -8730,6 +8742,11 @@
 			// 用户登录
 			async login(email, password) {
 				try {
+					// 检查连接状态
+					if (this.connectionError) {
+						return { success: false, error: '网络连接异常，请检查网络后重试' };
+					}
+					
 					console.log('SupabaseService.login 被调用:', { email, hasPassword: !!password });
 					console.log('Supabase 客户端状态:', !!window.supabase);
 					
@@ -8756,6 +8773,11 @@
 					return { success: true, user: data.user };
 				} catch (error) {
 					console.error('登录出错:', error);
+					// 检查是否是网络错误
+					if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_CLOSED')) {
+						this.connectionError = true;
+						return { success: false, error: '网络连接失败，请检查网络后重试' };
+					}
 					return { success: false, error: error.message };
 				}
 			}
@@ -8929,6 +8951,43 @@
 					
 					console.log('映射后的数据:', mappedData);
 					
+					// 首先检查是否已存在相同文字的笔记
+					const highlightText = noteData.highlights?.[0]?.text;
+					if (highlightText) {
+						const { data: existingNotes, error: queryError } = await window.supabase
+							.from('book_notes')
+							.select('*')
+							.eq('chapter_id', noteData.chapterId)
+							.eq('user_id', this.currentUser.id);
+						
+						if (queryError) {
+							throw queryError;
+						}
+						
+						// 查找相同文字的笔记
+						const existingNote = existingNotes?.find(note => 
+							note.highlights?.some(h => h.text === highlightText)
+						);
+						
+						if (existingNote) {
+							// 更新现有笔记
+							console.log('找到现有笔记，将更新:', existingNote.id);
+							const { data, error } = await window.supabase
+								.from('book_notes')
+								.update(mappedData)
+								.eq('id', existingNote.id)
+								.select();
+							
+							if (error) {
+								throw error;
+							}
+							
+							console.log('电子书笔记更新成功:', data);
+							return { success: true, data: data[0] };
+						}
+					}
+					
+					// 如果没有找到现有笔记，创建新笔记
 					const { data, error } = await window.supabase
 						.from('book_notes')
 						.insert([mappedData])
@@ -8938,7 +8997,7 @@
 						throw error;
 					}
 					
-					console.log('电子书笔记保存成功:', data);
+					console.log('电子书笔记创建成功:', data);
 					return { success: true, data: data[0] };
 				} catch (error) {
 					console.error('保存电子书笔记出错:', error);
@@ -9007,15 +9066,54 @@
 			// 删除电子书笔记
 			async deleteBookNote(noteId) {
 				try {
-					const { error } = await window.supabase
+					console.log('尝试删除笔记:', noteId);
+					
+					// 首先尝试直接删除（如果是云端ID）
+					let { error } = await window.supabase
 						.from('book_notes')
 						.delete()
 						.eq('id', noteId);
 					
+					// 如果直接删除失败，可能是本地ID，需要通过文字内容查找
 					if (error) {
-						throw error;
+						console.log('直接删除失败，尝试通过文字内容查找:', error.message);
+						
+						// 从本地ID中提取文字内容
+						const text = noteId.replace('text_note_', '');
+						
+						// 查找包含该文字的笔记
+						const { data: existingNotes, error: queryError } = await window.supabase
+							.from('book_notes')
+							.select('*')
+							.eq('chapter_id', 'zhouyi')
+							.eq('user_id', this.currentUser.id);
+						
+						if (queryError) {
+							throw queryError;
+						}
+						
+						// 查找匹配的笔记
+						const matchingNote = existingNotes?.find(note => 
+							note.highlights?.some(h => h.text === text)
+						);
+						
+						if (matchingNote) {
+							console.log('找到匹配的云端笔记，删除:', matchingNote.id);
+							const { error: deleteError } = await window.supabase
+								.from('book_notes')
+								.delete()
+								.eq('id', matchingNote.id);
+							
+							if (deleteError) {
+								throw deleteError;
+							}
+						} else {
+							console.log('未找到匹配的云端笔记');
+							return { success: true }; // 本地已删除，云端没有对应记录
+						}
 					}
 					
+					console.log('电子书笔记删除成功');
 					return { success: true };
 				} catch (error) {
 					console.error('删除电子书笔记出错:', error);
@@ -9023,9 +9121,17 @@
 				}
 			}
 
+			// 重置连接错误状态
+			resetConnectionError() {
+				this.connectionError = false;
+				console.log('连接错误状态已重置');
+			}
+			
 			// 用户登录成功回调
 			onUserLogin(user) {
 				console.log('用户登录成功，开始同步数据...');
+				// 登录成功时重置连接错误状态
+				this.connectionError = false;
 				// 这里可以添加登录成功后的逻辑
 			}
 
@@ -9140,19 +9246,39 @@
 		
 		// 测试 Supabase 连接
 		async function testSupabaseConnection() {
-			try {
-				console.log('测试 Supabase 连接...');
-				console.log('Supabase 客户端:', window.supabase);
-				console.log('Supabase 配置:', {
-					url: window.supabase?.supabaseUrl,
-					key: window.supabase?.supabaseKey ? '已设置' : '未设置'
-				});
-				
-				// 尝试获取当前用户（不需要登录）
-				const { data, error } = await window.supabase.auth.getUser();
-				console.log('Supabase 连接测试结果:', { data, error });
-			} catch (error) {
-				console.error('Supabase 连接测试失败:', error);
+			const maxRetries = 3;
+			let retryCount = 0;
+			
+			while (retryCount < maxRetries) {
+				try {
+					console.log(`测试 Supabase 连接... (尝试 ${retryCount + 1}/${maxRetries})`);
+					console.log('Supabase 客户端:', window.supabase);
+					console.log('Supabase 配置:', {
+						url: window.supabase?.supabaseUrl,
+						key: window.supabase?.supabaseKey ? '已设置' : '未设置'
+					});
+					
+					// 尝试获取当前用户（不需要登录）
+					const { data, error } = await window.supabase.auth.getUser();
+					console.log('Supabase 连接测试结果:', { data, error });
+					
+					// 如果成功，跳出重试循环
+					break;
+				} catch (error) {
+					retryCount++;
+					console.error(`Supabase 连接测试失败 (尝试 ${retryCount}/${maxRetries}):`, error);
+					
+					if (retryCount < maxRetries) {
+						console.log(`等待 2 秒后重试...`);
+						await new Promise(resolve => setTimeout(resolve, 2000));
+					} else {
+						console.error('Supabase 连接测试最终失败，可能是网络问题或服务不可用');
+						// 显示用户友好的错误提示
+						if (window.supabaseService) {
+							window.supabaseService.connectionError = true;
+						}
+					}
+				}
 			}
 		}
 		
@@ -9309,6 +9435,11 @@
 							showMessage('登录成功！', 'success');
 							document.getElementById('authModal').style.display = 'none';
 							updateUserStatus();
+							
+							// 登录成功后同步电子书笔记（延迟执行，确保iframe已加载）
+							setTimeout(() => {
+								syncBookNotesAfterLogin();
+							}, 1000);
 						} else {
 							// 检查是否需要邮箱确认
 							if (result.needsConfirmation) {
@@ -9421,6 +9552,23 @@
 			updateUserStatus();
 		}
 		
+		// 登录成功后同步电子书笔记
+		function syncBookNotesAfterLogin() {
+			console.log('开始同步电子书笔记...');
+			// 通知电子书iframe重新加载笔记
+			const iframe = document.querySelector('iframe[src*="周易电子书"]');
+			console.log('找到的电子书iframe:', iframe);
+			if (iframe && iframe.contentWindow) {
+				console.log('发送同步消息到电子书iframe');
+				iframe.contentWindow.postMessage({
+					type: 'syncNotesAfterLogin'
+				}, '*');
+				console.log('已通知电子书同步笔记');
+			} else {
+				console.log('未找到电子书iframe或iframe未加载完成');
+			}
+		}
+
 		// 更新用户状态显示
 		function updateUserStatus() {
 			console.log('updateUserStatus 被调用');
@@ -9511,6 +9659,15 @@
 					if (window.supabaseService && window.supabaseService.currentUser) {
 						console.log('用户已登录，开始保存到云端');
 						const result = await window.supabaseService.saveBookNote(event.data.data);
+						
+						// 发送响应回iframe
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'saveBookNoteResponse',
+							success: result.success,
+							error: result.error
+						}, targetOrigin);
+						
 						if (result.success) {
 							console.log('电子书笔记已保存到云端');
 						} else {
@@ -9518,19 +9675,96 @@
 						}
 					} else {
 						console.log('用户未登录，无法保存到云端');
+						// 发送失败响应
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'saveBookNoteResponse',
+							success: false,
+							error: '用户未登录'
+						}, targetOrigin);
 					}
 				} catch (error) {
 					console.log('电子书笔记云端保存出错:', error);
+					// 发送错误响应
+					const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+					event.source.postMessage({
+						type: 'saveBookNoteResponse',
+						success: false,
+						error: error.message
+					}, targetOrigin);
+				}
+			} else if (event.data.type === 'getBookNotes') {
+				console.log('处理获取笔记请求:', event.data.data);
+				try {
+					if (window.supabaseService && window.supabaseService.currentUser) {
+						console.log('用户已登录，开始从云端获取笔记');
+						const result = await window.supabaseService.getBookNotes(event.data.data.chapterId);
+						console.log('云端笔记获取结果:', result);
+						
+						// 发送响应回iframe
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'bookNotesResponse',
+							success: result.success,
+							data: result.data,
+							error: result.error
+						}, targetOrigin);
+					} else {
+						console.log('用户未登录，无法从云端获取笔记');
+						// 发送空响应
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'bookNotesResponse',
+							success: false,
+							data: [],
+							error: '用户未登录'
+						}, targetOrigin);
+					}
+				} catch (error) {
+					console.log('电子书笔记云端获取出错:', error);
+					// 发送错误响应
+					const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+					event.source.postMessage({
+						type: 'bookNotesResponse',
+						success: false,
+						data: [],
+						error: error.message
+					}, targetOrigin);
 				}
 			} else if (event.data.type === 'deleteBookNote') {
 				console.log('处理删除笔记请求:', event.data.data);
 				try {
 					if (window.supabaseService && window.supabaseService.currentUser) {
-						// 这里可以实现删除云端笔记的逻辑
-						console.log('请求删除云端笔记:', event.data.data.noteId);
+						console.log('用户已登录，开始从云端删除笔记');
+						const result = await window.supabaseService.deleteBookNote(event.data.data.noteId);
+						console.log('云端笔记删除结果:', result);
+						
+						// 发送响应回iframe
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'deleteBookNoteResponse',
+							success: result.success,
+							error: result.error
+						}, targetOrigin);
+					} else {
+						console.log('用户未登录，无法从云端删除笔记');
+						// 发送失败响应
+						const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+						event.source.postMessage({
+							type: 'deleteBookNoteResponse',
+							success: false,
+							error: '用户未登录'
+						}, targetOrigin);
 					}
 				} catch (error) {
 					console.log('电子书笔记云端删除出错:', error);
+					// 发送错误响应
+					const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
+					event.source.postMessage({
+						type: 'deleteBookNoteResponse',
+						success: false,
+						error: error.message
+					}, targetOrigin);
 				}
 			}
 		});
