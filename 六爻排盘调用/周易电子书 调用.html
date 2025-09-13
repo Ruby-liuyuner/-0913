@@ -2503,9 +2503,6 @@
 
             // 移动端文本选择处理
             function handleMobileTextSelection(e) {
-                // 防止默认行为，避免页面滚动
-                e.preventDefault();
-                
                 setTimeout(() => {
                     const selection = window.getSelection();
                     const text = selection.toString().trim();
@@ -2525,6 +2522,17 @@
             
             // 触摸事件（移动端支持）
             document.addEventListener('touchend', function(e) {
+                // 先检查是否是按钮点击，如果是则不处理文本选择
+                if (e.target.tagName === 'BUTTON' || 
+                    e.target.closest('button') || 
+                    e.target.closest('.nav-item') ||
+                    e.target.closest('.note-button-container') ||
+                    e.target.closest('.note-popup') ||
+                    e.target.closest('.panel') ||
+                    e.target.closest('.action-buttons')) {
+                    return; // 不处理按钮点击事件
+                }
+                
                 handleMobileTextSelection(e);
             });
 
@@ -2571,6 +2579,12 @@
             // 移动端触摸高亮文字
             document.addEventListener('touchend', function(e) {
                 if (e.target.classList.contains('highlighted-text')) {
+                    // 检查是否点击的是高亮文字内的按钮
+                    if (e.target.closest('.action-buttons') || 
+                        e.target.closest('button')) {
+                        return; // 不处理按钮点击
+                    }
+                    
                     e.preventDefault();
                     e.stopPropagation();
                     
@@ -2599,7 +2613,6 @@
             noteBtn.className = 'note-option-btn';
             noteBtn.textContent = '📝 写笔记';
             noteBtn.onclick = function(e) {
-                e.preventDefault();
                 e.stopPropagation();
                 showNotePopup();
                 hideNoteButton();
@@ -2607,7 +2620,6 @@
 
             // 添加触摸事件支持
             noteBtn.addEventListener('touchend', function(e) {
-                e.preventDefault();
                 e.stopPropagation();
                 showNotePopup();
                 hideNoteButton();
@@ -2845,7 +2857,6 @@
             const editButtons = document.querySelectorAll('.edit-note-btn');
             editButtons.forEach(button => {
                 button.addEventListener('click', function(e) {
-                    e.preventDefault();
                     e.stopPropagation();
                     
                     const noteId = this.getAttribute('data-note-id');
@@ -2858,7 +2869,6 @@
             const deleteButtons = document.querySelectorAll('.delete-note-btn');
             deleteButtons.forEach(button => {
                 button.addEventListener('click', function(e) {
-                    e.preventDefault();
                     e.stopPropagation();
                     
                     const noteId = this.getAttribute('data-note-id');
