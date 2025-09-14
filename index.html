@@ -525,7 +525,26 @@
 		}
 		
 		/* 9:16比例及以下屏幕优化 */
-		@media (max-aspect-ratio: 9/16) {
+		@media (max-aspect-ratio: 9/16), (max-width: 768px) {
+			/* 工具按钮 - 9:16以及更小页面时一行两个按钮 */
+			.tools-grid {
+				grid-template-columns: repeat(2, 1fr) !important;
+				gap: 12px !important;
+				padding: 2px 2px 10px 2px !important;
+				justify-items: center !important;
+				align-items: center !important;
+			}
+			
+			.tool-button {
+				height: 35px !important;
+				width: 150px !important;
+			}
+			
+			.tool-name {
+				font-size: 17px !important;
+			}
+			
+			
 			/* 本卦变卦容器调整 */
 			.ben-gua-container {
 				width: 250px !important;
@@ -786,16 +805,20 @@
 		
 		/* 学习页面样式 */
 		.study-container {
-			padding: 20px;
-			max-width: 800px;
+			padding: 0px;
+			max-width: 1200px;
 			margin: 0 auto;
-			padding-top: 40px; /* 为固定导航栏留出空间 */
+		}
+		
+		/* 学习页面body padding调整 */
+		#study-tab body {
+			padding: 0px !important;
 		}
 		
 		/* 工具页面样式 */
 		.tools-container {
 			padding: 20px;
-			max-width: 800px;
+			max-width: 1200px;
 			margin: 0 auto;
 			padding-top: -50px; /* 为固定导航栏留出空间 */
 		}
@@ -834,6 +857,32 @@
 			}
 		}
 		
+		@media (max-width: 768px) {
+			.tools-grid {
+				grid-template-columns: repeat(2, 1fr) !important;
+				gap: 12px !important;
+				padding: 2px 2px 10px 2px !important;
+				justify-items: center !important;
+				align-items: center !important;
+			}
+			
+			.tool-button {
+				height: 35px !important;
+				width: 150px !important;
+			}
+			
+			.tool-name {
+				font-size: 17px !important;
+			}
+			
+			/* 记录详情页面紫色容器在较小屏幕下调整 */
+			#view-record-tab .paipan-container > div[style*="background: #8B5CF6"] {
+				max-width: 90% !important;
+				margin-left: auto !important;
+				margin-right: auto !important;
+			}
+		}
+		
 		@media (max-width: 480px) {
 			.tools-grid {
 				gap: 8px;
@@ -853,17 +902,17 @@
             .tool-button {
                     width: 100px;
                     height: 33px;
-                    background: #f5f5f5;
-                    border: none;
+                    background: white;
+                    border: 1px solid #e0e0e0;
                     border-radius: 8px;
                     cursor: pointer;
                     transition: all 0.3s ease;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
-                    color: #555555;
+                    color: #333333;
                     font-family: 'Microsoft YaHei', Arial, sans-serif;
                     position: relative;
                     overflow: hidden;
@@ -871,9 +920,10 @@
 		
             .tool-button:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
-                    background: #e8e8e8;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    background: #f8f8f8;
                     color: #333333;
+                    border-color: #d0d0d0;
             }
 		
 		.tool-button:active {
@@ -949,7 +999,7 @@
 			align-items: flex-end;
 			background: white;
 			z-index: 1000;
-			padding: 20px 0 -6px 0;
+			padding: 0px 0 -6px 0;
 			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 		}
 		
@@ -981,6 +1031,16 @@
 			min-height: calc(100vh - 140px); /* 适配固定导航栏的高度 */
 		}
 		
+		/* 视频容器样式 */
+		.video-container {
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+		
+		.video-container:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+		}
+		
 		.study-subsection.active {
 			display: block;
 		}
@@ -1010,7 +1070,6 @@
 			flex-wrap: wrap;
 			gap: 20px;
 			justify-content: center;
-			margin-top: 20px;
 			width: 100%;
 			margin-left: auto;
 			margin-right: auto;
@@ -1104,7 +1163,6 @@
 		/* 练习按钮样式 */
 		.practice-container {
 			width: 100%;
-			margin-top: -100px;
 		}
 		
 		.practice-button {
@@ -1207,6 +1265,37 @@
 			padding-top: 20px; /* 减少顶部间距 */
 		}
 		
+		/* 记录详情页面样式 */
+		#view-record-tab .paipan-container {
+			max-width: 1200px;
+		}
+		
+		/* 记录详情页面body padding调整 */
+		#view-record-tab body {
+			padding: 10px !important;
+		}
+		
+		/* 记录详情页面本卦变卦内容缩小 */
+		#view-record-tab .gua-container {
+			transform: scale(0.90);
+			transform-origin: top center;
+		}
+		
+		/* 记录详情页面本卦变卦容器顶部间隙 */
+		#view-record-tab .record-gua-content {
+			padding-top: 50px !important;
+		}
+		
+		/* 记录详情页面断卦笔记容器宽度和居中 */
+		#view-record-tab .duangua-notes {
+			width: 100% !important;
+			max-width: 100% !important;
+			margin: 20px 0 !important;
+			display: block !important;
+			text-align: center !important;
+		}
+		
+		
 		/* 排盘子板块导航 */
 		.paipan-nav {
 			position: fixed;
@@ -1235,7 +1324,7 @@
 		/* 记录页面样式 */
 		.record-container {
 			padding: 20px;
-			max-width: 800px;
+			max-width: 1200px;
 			margin: 0 auto;
 			padding-top: 20px; /* 为固定导航栏留出空间 */
 		}
@@ -1604,7 +1693,7 @@
 				
 				<!-- 书库子板块 -->
 				<div id="study-library" class="study-subsection active">
-					<div class="book-container">
+					<div class="book-container" style="background: transparent; margin-top: 80px;">
 						<div class="book-button" onclick="openBook('book1')">
 							<div class="book-title">《周易》</div>
 							<div class="book-pages"></div>
@@ -1622,7 +1711,7 @@
 				
 				<!-- 练习子板块 -->
 				<div id="study-practice" class="study-subsection">
-					<div class="practice-container">
+					<div class="practice-container" style="background: transparent; margin-top: -60px;">
 						<div class="practice-button" onclick="startPractice('practice1')">
 							<div class="practice-header">
 								<h3 class="practice-name">记忆64卦</h3>
@@ -1678,9 +1767,41 @@
 				
 				<!-- 视频子板块 -->
 				<div id="study-video" class="study-subsection">
-					<h3>视频</h3>
-					<div class="study-content">
-						<p>视频内容即将添加...</p>
+					<div class="study-content" style="padding-top: 0px; background: transparent; margin-top: -60px;">
+						<!-- 视频容器 -->
+						<div class="video-container" style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+							<h4 style="color: #333; margin: 0 0 15px 0; text-align: center; font-size: 18px; font-weight: 600;">六爻排盘全流程</h4>
+							<div style="position: relative; width: 100%; height: 0; padding-bottom: 56.25%; background: #f5f5f5; border-radius: 8px; overflow: hidden;">
+								<iframe src="https://player.bilibili.com/player.html?bvid=BV1qDe2zeEoz&page=1&autoplay=0" 
+										scrolling="no" 
+										border="0" 
+										frameborder="no" 
+										framespacing="0" 
+										allowfullscreen="true"
+										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+								</iframe>
+							</div>
+							<p style="margin-top: 15px; color: #666; font-size: 14px; text-align: center; line-height: 1.6;">
+								学习六爻排盘的完整流程，从基础概念到实际操作，助您快速掌握六爻占卜技巧。
+							</p>
+						</div>
+						
+						<!-- 示例：第二个视频容器 -->
+						<div class="video-container" style="background: white; border-radius: 12px; padding: 15px 20px 20px 20px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+							<h4 style="color: #333; margin: 0 0 15px 0; text-align: center; font-size: 18px; font-weight: 600;">更多精彩内容即将更新</h4>
+							<div style="position: relative; width: 100%; height: 0; padding-bottom: 56.25%; background: #f5f5f5; border-radius: 8px; overflow: hidden;">
+								<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999;">
+									<div style="font-size: 48px; margin-bottom: 10px;">▶️</div>
+									<div style="font-size: 16px;">更多精彩内容即将更新</div>
+								</div>
+							</div>
+							<p style="margin-top: 15px; color: #666; font-size: 14px; text-align: center; line-height: 1.6;">
+								更多精彩内容即将更新
+							</p>
+						</div>
+						
+						<!-- 预留更多视频容器的位置 -->
+						<!-- 后续添加的视频可以复制上面的 video-container 结构 -->
 					</div>
 				</div>
 			</div>
@@ -1707,12 +1828,6 @@
 						</div>
 						<div class="tool-button tool-4" onclick="openTool('guatable')">
 							<div class="tool-name">64卦表</div>
-						</div>
-						<div class="tool-button tool-5" onclick="openTool('coming1')">
-							<div class="tool-name">敬请期待</div>
-						</div>
-						<div class="tool-button tool-6" onclick="openTool('coming2')">
-							<div class="tool-name">敬请期待</div>
 						</div>
 					</div>
 				</div>
@@ -6967,10 +7082,19 @@
 				const yongshen = record.yongshen || record.gua_data?.yongshen || '未选择';
 				const time = record.time || '时间未知';
 				// 优先使用 fullGuaContent，然后是 gua_data.fullGuaContent，最后是 gua_data.html
-				const fullGuaContent = record.fullGuaContent || 
+				let fullGuaContent = record.fullGuaContent || 
 					record.gua_data?.fullGuaContent || 
 					record.gua_data?.html || 
 					'<p>暂无排盘内容</p>';
+				
+				// 移除重新排盘和保存记录按钮（这些按钮在记录详情页面不需要）
+				fullGuaContent = fullGuaContent.replace(/<button[^>]*id="resetBtn"[^>]*>重新排盘<\/button>/g, '');
+				fullGuaContent = fullGuaContent.replace(/<button[^>]*id="saveRecordBtn"[^>]*>保存记录<\/button>/g, '');
+				// 移除可能残留的按钮容器
+				fullGuaContent = fullGuaContent.replace(/<div[^>]*style="[^"]*text-align:\s*center[^"]*margin-top:\s*-45px[^"]*"[^>]*>\s*<\/div>/g, '');
+				
+				// 移除断卦步骤部分（记录详情页面不需要）
+				fullGuaContent = fullGuaContent.replace(/<div class="duangua-steps">[\s\S]*?<\/div>/g, '');
 				
 				console.log("处理后的数据:", { question, yongshen, time, fullGuaContent });
 				
@@ -6982,22 +7106,20 @@
 					</div>
 					
 					<div class="paipan-container" style="padding-top: 20px;">
-						<div style="margin-bottom: 5px; padding: 8px 20px 5px 20px; border-bottom: 1px solid #eee; background: #f8f9fa;">
-							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+						<!-- 上方排盘记录详情 -->
+						<div style="margin-bottom: 5px; margin-top: -10px; padding: 15px 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
 								<h2 style="margin: 0; color: #333; font-size: 16px;">排盘记录详情</h2>
 								<button onclick="backToRecordList()" style="padding: 6px 12px; background-color: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">返回</button>
 							</div>
-							<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-								<div>
-									<p><strong>问事：</strong>${question}</p>
-									<p><strong>用神：</strong>${yongshen}</p>
-								</div>
-								<div>
-									<p><strong>时间：</strong>${time}</p>
-								</div>
+							<div style="display: flex; flex-direction: column; gap: 0px;">
+								<p style="color: #333;"><strong>问事：</strong>${question}</p>
+								<p style="color: #333;"><strong>用神：</strong>${yongshen}</p>
+								<p style="color: #333;"><strong>时间：</strong>${time}</p>
 							</div>
 						</div>
-						<div class="record-gua-content" style="margin-top: 10px; padding: 15px 20px; background: #f8f9fa; border-radius: 8px;">
+						<!-- 下方本卦变卦内容和断卦笔记内容 -->
+						<div class="record-gua-content" style="margin-top: 10px; padding: 15px 10px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 							${fullGuaContent}
 						</div>
 						</div>
@@ -7015,6 +7137,12 @@
 				console.error("未找到记录，recordId:", recordId);
 				alert('未找到该记录');
 			}
+		};
+		
+		// 播放视频函数
+		window.playVideo = function() {
+			// 尝试直接跳转到B站视频页面
+			window.open('https://www.bilibili.com/video/BV1qDe2zeEoz', '_blank');
 		};
 		
 		// 返回记录列表
